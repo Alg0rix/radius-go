@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/your-org/radius-go/internal/config"
-	"github.com/your-org/radius-go/internal/radius"
-	"github.com/your-org/radius-go/internal/runtime"
+	"github.com/Alg0rix/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/radius"
+	"github.com/Alg0rix/radius-go/internal/runtime"
 )
 
 func Run(ctx context.Context, cfg config.Config) error {

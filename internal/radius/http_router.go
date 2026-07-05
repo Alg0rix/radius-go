@@ -2,7 +2,7 @@ package radius
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/your-org/radius-go/internal/internalsecret"
+	"github.com/Alg0rix/radius-go/internal/internalsecret"
 )
 
 // RegisterHTTPHandlers registers all HTTP management routes on the Echo router.

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/your-org/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/config"
 )
 
 func NewLogger(cfg config.Config) zerolog.Logger {

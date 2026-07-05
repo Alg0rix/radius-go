@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/your-org/radius-go/internal/domain"
+	"github.com/Alg0rix/radius-go/internal/domain"
 
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"

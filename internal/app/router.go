@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
-	"github.com/your-org/radius-go/internal/config"
-	"github.com/your-org/radius-go/internal/radius"
-	"github.com/your-org/radius-go/internal/runtime"
+	"github.com/Alg0rix/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/radius"
+	"github.com/Alg0rix/radius-go/internal/runtime"
 )
 
 // setupRoutes wires health (public) + management (internal-secret) routes

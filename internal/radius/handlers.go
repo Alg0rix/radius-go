@@ -7,12 +7,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/your-org/radius-go/internal/domain"
-	"github.com/your-org/radius-go/internal/runtime"
+	"github.com/Alg0rix/radius-go/internal/domain"
+	"github.com/Alg0rix/radius-go/internal/runtime"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const requestTimeout = 5 * time.Second
+
+func (s *Service) fail(c echo.Context, status int, code, message string, err error) error {
+	if status >= 500 && err != nil {
+		s.deps.Logger.Error().Err(err).Str("method", c.Request().Method).Str("path", c.Request().URL.Path).Msg("handler error")
+	}
+	return runtime.Fail(c, status, code, message, err)
+}
 
 // --- NAS handlers ---
 
@@ -44,11 +51,17 @@ func (s *Service) HandleListNAS(c echo.Context) error {
 func (s *Service) HandleCreateNAS(c echo.Context) error {
 	var req domain.CreateNASRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.Name == "" || req.IPAddress == "" || req.Secret == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "name, ip_address, and secret are required", nil)
+	if !nonEmpty(req.Name) || req.IPAddress == "" || req.Secret == "" {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "name, ip_address, and secret are required", nil)
 	}
+	if !validIP(req.IPAddress) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid ip_address", nil)
+	}
+	req.Name = limitString(req.Name, maxNameLen)
+	req.Secret = limitString(req.Secret, maxSecretLen)
+	req.Description = limitString(req.Description, maxDescriptionLen)
 
 	nas := domain.NAS{
 		ID:          uuid.New().String(),
@@ -62,7 +75,7 @@ func (s *Service) HandleCreateNAS(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	if err := s.repo.CreateNAS(ctx, nas); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "create NAS failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "create NAS failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.Created(c, nas)
@@ -82,16 +95,25 @@ func (s *Service) HandleCreateNAS(c echo.Context) error {
 //	@Router			/radius/nases/{id} [put]
 func (s *Service) HandleUpdateNAS(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	var req domain.UpdateNASRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
+	if req.IPAddress != "" && !validIP(req.IPAddress) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid ip_address", nil)
+	}
+	req.Name = limitString(req.Name, maxNameLen)
+	req.Secret = limitString(req.Secret, maxSecretLen)
+	req.Description = limitString(req.Description, maxDescriptionLen)
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	existing, err := s.repo.GetNASByID(ctx, id)
 	if err != nil {
-		return runtime.Fail(c, http.StatusNotFound, "not_found", "NAS not found", err.Error())
+		return s.fail(c, http.StatusNotFound, "not_found", "NAS not found", nil)
 	}
 
 	if req.Name != "" {
@@ -111,7 +133,7 @@ func (s *Service) HandleUpdateNAS(c echo.Context) error {
 	}
 
 	if err := s.repo.UpdateNAS(ctx, *existing); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "update NAS failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "update NAS failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.OK(c, existing)
@@ -128,10 +150,13 @@ func (s *Service) HandleUpdateNAS(c echo.Context) error {
 //	@Router		/radius/nases/{id} [delete]
 func (s *Service) HandleDeleteNAS(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	if err := s.repo.DeleteNAS(ctx, id); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "delete NAS failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "delete NAS failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.OK(c, map[string]string{"id": id})
@@ -165,15 +190,31 @@ func (s *Service) HandleListSubscribers(c echo.Context) error {
 func (s *Service) HandleCreateSubscriber(c echo.Context) error {
 	var req domain.CreateUserRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.Username == "" || req.Password == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "username and password are required", nil)
+	if !nonEmpty(req.Username) || req.Password == "" {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "username and password are required", nil)
 	}
+	if len(req.Username) > maxUsernameLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "username too long", nil)
+	}
+	if len(req.Password) > maxPasswordLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "password too long", nil)
+	}
+	if !validEmail(req.Email) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid email", nil)
+	}
+	if !validServiceType(req.ServiceType) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid service_type", nil)
+	}
+	req.FullName = limitString(req.FullName, maxNameLen)
+	req.FramedIP = limitString(req.FramedIP, maxIPLen)
+	req.MikrotikGroup = limitString(req.MikrotikGroup, maxGroupLen)
+	req.RateLimit = limitString(req.RateLimit, maxRateLimitLen)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "hash_error", "password hashing failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "hash_error", "password hashing failed", err)
 	}
 
 	serviceType := domain.ServiceTypeFramed
@@ -203,7 +244,7 @@ func (s *Service) HandleCreateSubscriber(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	if err := s.repo.CreateUser(ctx, user); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "create user failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "create user failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.Created(c, domain.SubscriberFromUser(user))
@@ -223,16 +264,35 @@ func (s *Service) HandleCreateSubscriber(c echo.Context) error {
 //	@Router		/radius/subscribers/{id} [put]
 func (s *Service) HandleUpdateSubscriber(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	var req domain.UpdateUserRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
+	if req.Username != "" && (!nonEmpty(req.Username) || len(req.Username) > maxUsernameLen) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid username", nil)
+	}
+	if req.Password != "" && len(req.Password) > maxPasswordLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "password too long", nil)
+	}
+	if !validEmail(req.Email) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid email", nil)
+	}
+	if !validServiceType(req.ServiceType) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid service_type", nil)
+	}
+	req.FullName = limitString(req.FullName, maxNameLen)
+	req.FramedIP = limitString(req.FramedIP, maxIPLen)
+	req.MikrotikGroup = limitString(req.MikrotikGroup, maxGroupLen)
+	req.RateLimit = limitString(req.RateLimit, maxRateLimitLen)
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	existing, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
-		return runtime.Fail(c, http.StatusNotFound, "not_found", "user not found", err.Error())
+		return s.fail(c, http.StatusNotFound, "not_found", "user not found", nil)
 	}
 
 	if req.Username != "" {
@@ -241,7 +301,7 @@ func (s *Service) HandleUpdateSubscriber(c echo.Context) error {
 	if req.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			return runtime.Fail(c, http.StatusInternalServerError, "hash_error", "password hashing failed", err.Error())
+			return s.fail(c, http.StatusInternalServerError, "hash_error", "password hashing failed", err)
 		}
 		existing.PasswordHash = string(hash)
 	}
@@ -286,7 +346,7 @@ func (s *Service) HandleUpdateSubscriber(c echo.Context) error {
 	}
 
 	if err := s.repo.UpdateUser(ctx, *existing); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "update user failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "update user failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.OK(c, domain.SubscriberFromUser(*existing))
@@ -303,10 +363,13 @@ func (s *Service) HandleUpdateSubscriber(c echo.Context) error {
 //	@Router		/radius/subscribers/{id} [delete]
 func (s *Service) HandleDeleteSubscriber(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	if err := s.repo.DeleteUser(ctx, id); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "delete user failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "delete user failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.OK(c, map[string]string{"id": id})
@@ -352,17 +415,18 @@ func (s *Service) HandleStatus(c echo.Context) error {
 func (s *Service) HandleDisconnectUser(c echo.Context) error {
 	var req domain.DisconnectRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.Username == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "username is required", nil)
+	if !nonEmpty(req.Username) || len(req.Username) > maxUsernameLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "username is required", nil)
 	}
+	req.Reason = limitString(req.Reason, maxDescriptionLen)
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
 	defer cancel()
 	count, err := s.DisconnectUser(ctx, req.Username, req.Reason)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "disconnect_failed", "disconnect failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "disconnect_failed", "disconnect failed", err)
 	}
 	return runtime.OK(c, map[string]any{
 		"username":           req.Username,
@@ -384,18 +448,20 @@ func (s *Service) HandleDisconnectUser(c echo.Context) error {
 func (s *Service) HandleCoAChange(c echo.Context) error {
 	var req domain.CoAChangeRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.Username == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "username is required", nil)
+	if !nonEmpty(req.Username) || len(req.Username) > maxUsernameLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "username is required", nil)
 	}
+	req.RateLimit = limitString(req.RateLimit, maxRateLimitLen)
+	req.Group = limitString(req.Group, maxGroupLen)
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
 	defer cancel()
 	result, err := s.ChangeUserProfile(ctx, req.Username, req.RateLimit, req.Group,
 		req.BandwidthMaxUp, req.BandwidthMaxDown, req.MaxTotalOctets)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "coa_failed", "CoA change failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "coa_failed", "CoA change failed", err)
 	}
 	return runtime.OK(c, result)
 }
@@ -413,7 +479,7 @@ func (s *Service) HandleSessionCleanup(c echo.Context) error {
 	defer cancel()
 	result, err := s.cleanupStaleSessions(ctx)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "cleanup_failed", "cleanup failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "cleanup_failed", "cleanup failed", err)
 	}
 	return runtime.OK(c, result)
 }
@@ -431,7 +497,7 @@ func (s *Service) HandleSessionReconcile(c echo.Context) error {
 	defer cancel()
 	merged, err := s.ReconcileSessions(ctx)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "reconcile_failed", "reconcile failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "reconcile_failed", "reconcile failed", err)
 	}
 	return runtime.OK(c, map[string]int{"merged": merged})
 }

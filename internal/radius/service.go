@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/your-org/radius-go/internal/config"
-	"github.com/your-org/radius-go/internal/domain"
-	"github.com/your-org/radius-go/internal/runtime"
+	"github.com/Alg0rix/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/domain"
+	"github.com/Alg0rix/radius-go/internal/runtime"
 
 	"layeh.com/radius"
 )

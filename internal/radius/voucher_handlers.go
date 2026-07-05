@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/your-org/radius-go/internal/domain"
-	"github.com/your-org/radius-go/internal/runtime"
+	"github.com/Alg0rix/radius-go/internal/domain"
+	"github.com/Alg0rix/radius-go/internal/runtime"
 )
 
 // Voucher HTTP handlers. Swagger annotations included.
@@ -25,7 +25,7 @@ func (s *Service) HandleListVoucherPackages(c echo.Context) error {
 	defer cancel()
 	pkgs, err := s.voucher.ListPackages(ctx)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "list voucher packages failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "list voucher packages failed", err)
 	}
 	return runtime.OK(c, pkgs)
 }
@@ -44,16 +44,21 @@ func (s *Service) HandleListVoucherPackages(c echo.Context) error {
 func (s *Service) HandleCreateVoucherPackage(c echo.Context) error {
 	var req domain.CreateVoucherPackageRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.Name == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "name is required", nil)
+	if !nonEmpty(req.Name) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "name is required", nil)
+	}
+	req.Name = limitString(req.Name, maxNameLen)
+	req.Description = limitString(req.Description, maxDescriptionLen)
+	if !validTimeLimitType(req.TimeLimitType) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid time_limit_type", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	pkg, err := s.voucher.CreatePackage(ctx, req)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "create voucher package failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "create voucher package failed", err)
 	}
 	return runtime.Created(c, pkg)
 }
@@ -72,15 +77,27 @@ func (s *Service) HandleCreateVoucherPackage(c echo.Context) error {
 //	@Router		/voucher-packages/{id} [put]
 func (s *Service) HandleUpdateVoucherPackage(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	var req domain.UpdateVoucherPackageRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
+	}
+	if req.Name != nil {
+		*req.Name = limitString(*req.Name, maxNameLen)
+	}
+	if req.Description != nil {
+		*req.Description = limitString(*req.Description, maxDescriptionLen)
+	}
+	if req.TimeLimitType != nil && !validTimeLimitType(*req.TimeLimitType) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid time_limit_type", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	pkg, err := s.voucher.UpdatePackage(ctx, id, req)
 	if err != nil {
-		return runtime.Fail(c, http.StatusNotFound, "not_found", "voucher package not found", err.Error())
+		return s.fail(c, http.StatusNotFound, "not_found", "voucher package not found", nil)
 	}
 	return runtime.OK(c, pkg)
 }
@@ -96,10 +113,13 @@ func (s *Service) HandleUpdateVoucherPackage(c echo.Context) error {
 //	@Router		/voucher-packages/{id} [delete]
 func (s *Service) HandleDeleteVoucherPackage(c echo.Context) error {
 	id := c.Param("id")
+	if !validUUID(id) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid id", nil)
+	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	if err := s.voucher.DeletePackage(ctx, id); err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "delete voucher package failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "delete voucher package failed", err)
 	}
 	return runtime.OK(c, map[string]string{"id": id})
 }
@@ -118,10 +138,10 @@ func (s *Service) HandleDeleteVoucherPackage(c echo.Context) error {
 func (s *Service) HandleGenerateVouchers(c echo.Context) error {
 	var req domain.GenerateVoucherRequest
 	if err := c.Bind(&req); err != nil {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err.Error())
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid JSON", err)
 	}
-	if req.PackageID == "" {
-		return runtime.Fail(c, http.StatusBadRequest, "bad_request", "package_id is required", nil)
+	if !validUUID(req.PackageID) {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "package_id is required", nil)
 	}
 	if req.CodeFormat != "random" && req.CodeFormat != "custom" {
 		req.CodeFormat = "random"
@@ -129,11 +149,13 @@ func (s *Service) HandleGenerateVouchers(c echo.Context) error {
 	if req.PasswordMode != "same_as_user" && req.PasswordMode != "random" && req.PasswordMode != "custom" {
 		req.PasswordMode = "same_as_user"
 	}
+	req.CustomCode = limitString(req.CustomCode, maxUsernameLen)
+	req.CustomPassword = limitString(req.CustomPassword, maxPasswordLen)
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 30*time.Second)
 	defer cancel()
 	vouchers, err := s.voucher.GenerateVouchers(ctx, req)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "generate_failed", "voucher generation failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "generate_failed", "voucher generation failed", err)
 	}
 	s.refreshFromDBAsync()
 	return runtime.Created(c, vouchers)
@@ -152,7 +174,7 @@ func (s *Service) HandleListVouchers(c echo.Context) error {
 	defer cancel()
 	subs, err := s.voucher.ListVouchers(ctx)
 	if err != nil {
-		return runtime.Fail(c, http.StatusInternalServerError, "db_error", "list vouchers failed", err.Error())
+		return s.fail(c, http.StatusInternalServerError, "db_error", "list vouchers failed", err)
 	}
 	return runtime.OK(c, subs)
 }
@@ -169,11 +191,14 @@ func (s *Service) HandleListVouchers(c echo.Context) error {
 //	@Router		/vouchers/{code}/balance [get]
 func (s *Service) HandleVoucherBalance(c echo.Context) error {
 	code := c.Param("code")
+	if !nonEmpty(code) || len(code) > maxUsernameLen {
+		return s.fail(c, http.StatusBadRequest, "bad_request", "invalid code", nil)
+	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), requestTimeout)
 	defer cancel()
 	bal, err := s.voucher.GetBalance(ctx, code)
 	if err != nil {
-		return runtime.Fail(c, http.StatusNotFound, "not_found", "voucher not found", err.Error())
+		return s.fail(c, http.StatusNotFound, "not_found", "voucher not found", nil)
 	}
 	return runtime.OK(c, bal)
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
-	"github.com/your-org/radius-go/migrations"
+	"github.com/Alg0rix/radius-go/migrations"
 )
 
 func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {

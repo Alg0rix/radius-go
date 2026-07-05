@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/your-org/radius-go/internal/domain"
+	"github.com/Alg0rix/radius-go/internal/domain"
 )
 
 type Repository struct {

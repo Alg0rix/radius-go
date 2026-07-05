@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
-	"github.com/your-org/radius-go/internal/config"
-	"github.com/your-org/radius-go/internal/database"
+	"github.com/Alg0rix/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/database"
 )
 
 type Dependencies struct {

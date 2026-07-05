@@ -5,7 +5,7 @@ package httpapi
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/your-org/radius-go/internal/radius"
+	"github.com/Alg0rix/radius-go/internal/radius"
 )
 
 // RegisterRoutes is the single entry point used by app.Run() to set up the

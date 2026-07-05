@@ -19,10 +19,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	_ "github.com/your-org/radius-go/docs" // swag-generated docs
+	_ "github.com/Alg0rix/radius-go/docs" // swag-generated docs
 
-	"github.com/your-org/radius-go/internal/app"
-	"github.com/your-org/radius-go/internal/config"
+	"github.com/Alg0rix/radius-go/internal/app"
+	"github.com/Alg0rix/radius-go/internal/config"
 )
 
 func main() {
