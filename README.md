@@ -40,7 +40,7 @@ The server listens on:
 
 ## API
 
-All management endpoints require `X-Internal-Secret` header matching `INTERNAL_SECRET`.
+All management endpoints require `Authorization: Bearer <INTERNAL_SECRET>` (or the deprecated `X-Internal-Secret` header) matching `INTERNAL_SECRET`.
 
 Health endpoints (`/health`, `/ready`, `/healthz`, `/readyz`) are public.
 
@@ -70,6 +70,44 @@ GET    /api/v1/vouchers/:code/balance
 
 Swagger UI: `http://localhost:8083/swagger/index.html`
 
+## CLI
+
+`radiusctl` is a command-line client for the management API. Build and run it from the module root:
+
+```bash
+go run ./cmd/radiusctl --help
+```
+
+Configure the target with `--server` and `--secret`, or with the `RADIUS_SERVER` and `RADIUS_SECRET` env vars. Add `--json` for machine-readable output.
+
+```bash
+export RADIUS_SERVER=http://localhost:8083
+export RADIUS_SECRET="$INTERNAL_SECRET"
+
+radiusctl status
+radiusctl nas list
+radiusctl nas create --name edge --ip 10.0.0.1 --secret sharedkey
+radiusctl subscriber create --username alice --password s3cret
+radiusctl subscriber list
+radiusctl session list
+radiusctl session disconnect --username alice
+radiusctl session coa-change --username alice --rate-limit 5M/5M
+radiusctl voucher package list
+radiusctl voucher generate --package-id <uuid> --count 5
+radiusctl voucher balance --code <voucher-username>
+```
+
+Commands mirror the API:
+
+```
+radiusctl status
+radiusctl nas {list,create,update,delete}
+radiusctl subscriber {list,create,update,delete}
+radiusctl session {list,disconnect,coa-change,cleanup,reconcile}
+radiusctl voucher {list,generate,balance}
+radiusctl voucher package {list,create,update,delete}
+```
+
 ## Testing
 
 ```bash
@@ -77,7 +115,7 @@ Swagger UI: `http://localhost:8083/swagger/index.html`
 curl http://localhost:8083/health
 
 # Status (requires auth)
-curl -H "X-Internal-Secret: <secret>" http://localhost:8083/api/v1/radius/status
+curl -H "Authorization: Bearer <secret>" http://localhost:8083/api/v1/radius/status
 
 # RADIUS auth test (requires radclient)
 echo "User-Name=testuser,User-Password=testpass" | radclient -x 127.0.0.1:1812 auth testing123
