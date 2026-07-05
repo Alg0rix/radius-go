@@ -1,5 +1,7 @@
 # radius-go
 
+> **Work in progress** — not yet production-ready.
+
 Production-grade RADIUS server with HTTP management API.
 
 Uses [layeh.com/radius](https://layeh.com/radius) for the RADIUS protocol, [labstack/echo](https://echo.labstack.com) for the HTTP API, and PostgreSQL for persistence.
