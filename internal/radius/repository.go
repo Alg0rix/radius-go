@@ -86,7 +86,7 @@ func (r *Repository) CreateUser(ctx context.Context, user domain.RadiusUser) err
 		user.ID, user.Username, user.PasswordHash, user.FullName, user.Email, user.Enabled,
 		user.SimultaneousUse, user.SessionTimeout, user.IdleTimeout, user.FramedIP, user.MikrotikGroup,
 		user.RateLimit, user.BandwidthMaxUp, user.BandwidthMaxDown, user.MaxTotalOctets,
-		user.IsVoucher, nullStr(user.VoucherPackageID), user.FirstLoginAt, user.ExpiresAt,
+		user.IsVoucher, user.VoucherPackageID, user.FirstLoginAt, user.ExpiresAt,
 		user.UsageSecondsUsed, user.DataBytesUsed, user.SpeedUploadKbps, user.SpeedDownloadKbps,
 		user.VoucherTimeLimitType, user.VoucherTimeLimitSeconds, user.VoucherDataCapBytes,
 		string(user.ServiceType))
@@ -104,7 +104,7 @@ func (r *Repository) UpdateUser(ctx context.Context, user domain.RadiusUser) err
 		user.Username, user.PasswordHash, user.FullName, user.Email, user.Enabled,
 		user.SimultaneousUse, user.SessionTimeout, user.IdleTimeout, user.FramedIP, user.MikrotikGroup,
 		user.RateLimit, user.BandwidthMaxUp, user.BandwidthMaxDown, user.MaxTotalOctets,
-		user.IsVoucher, nullStr(user.VoucherPackageID),
+		user.IsVoucher, user.VoucherPackageID,
 		user.UsageSecondsUsed, user.DataBytesUsed, user.SpeedUploadKbps, user.SpeedDownloadKbps,
 		user.VoucherTimeLimitType, user.VoucherTimeLimitSeconds, user.VoucherDataCapBytes,
 		string(user.ServiceType), user.ID)

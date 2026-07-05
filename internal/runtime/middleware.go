@@ -31,7 +31,7 @@ func rateLimiter() echo.MiddlewareFunc {
 			p := c.Request().URL.Path
 			return p == "/health" || p == "/ready" || p == "/healthz" || p == "/readyz"
 		},
-		Store: middleware.NewRateLimiterMemoryStore(rate.Limit(100.0 / 60.0)), // 100 req/min per IP
+		Store: middleware.NewRateLimiterMemoryStore(rate.Limit(1000.0 / 60.0)), // 1000 req/min per IP
 		IdentifierExtractor: func(c echo.Context) (string, error) {
 			return c.RealIP(), nil
 		},

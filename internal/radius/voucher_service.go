@@ -225,7 +225,7 @@ func (v *VoucherService) generateOneVoucher(ctx context.Context, pkg *domain.Vou
 		SpeedUploadKbps:         pkg.SpeedUploadKbps,
 		SpeedDownloadKbps:       pkg.SpeedDownloadKbps,
 		IsVoucher:               true,
-		VoucherPackageID:        pkg.ID,
+		VoucherPackageID:        &pkg.ID,
 		VoucherTimeLimitType:    string(pkg.TimeLimitType),
 		VoucherTimeLimitSeconds: pkg.TimeLimitSeconds,
 		VoucherDataCapBytes:     pkg.DataCapBytes,
@@ -266,8 +266,8 @@ func (v *VoucherService) GetBalance(ctx context.Context, username string) (domai
 		DataBytesUsed:     user.DataBytesUsed,
 	}
 
-	if user.VoucherPackageID != "" {
-		if pkg, err := v.GetPackage(ctx, user.VoucherPackageID); err == nil {
+	if user.VoucherPackageID != nil && *user.VoucherPackageID != "" {
+		if pkg, err := v.GetPackage(ctx, *user.VoucherPackageID); err == nil {
 			bal.PackageName = pkg.Name
 			bal.TimeLimitType = string(pkg.TimeLimitType)
 			bal.TimeLimitSeconds = pkg.TimeLimitSeconds

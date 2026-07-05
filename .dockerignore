@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/plan.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+radius-go
+radiusctl
+bin/
+dist/
+
+# Test
+coverage.out
+*.test
+
+# Local env
+.env
+.env.*

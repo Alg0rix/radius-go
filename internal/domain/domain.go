@@ -35,10 +35,10 @@ type RadiusUser struct {
 	MaxTotalOctets   uint32      `json:"max_total_octets"`
 	ServiceType      ServiceType `json:"service_type"`
 	// Voucher tracking — zero values mean "not a voucher".
-	IsVoucher               bool       `json:"is_voucher"`
-	VoucherPackageID        string     `json:"voucher_package_id,omitempty"`
-	FirstLoginAt            *time.Time `json:"first_login_at,omitempty"`
-	ExpiresAt               *time.Time `json:"expires_at,omitempty"`
+	IsVoucher               bool        `json:"is_voucher"`
+	VoucherPackageID        *string     `json:"voucher_package_id,omitempty"`
+	FirstLoginAt            *time.Time  `json:"first_login_at,omitempty"`
+	ExpiresAt               *time.Time  `json:"expires_at,omitempty"`
 	UsageSecondsUsed        int        `json:"usage_seconds_used"`
 	DataBytesUsed           int64      `json:"data_bytes_used"`
 	SpeedUploadKbps         int        `json:"speed_upload_kbps"`
@@ -105,13 +105,17 @@ type Subscriber struct {
 	MaxTotalOctets   uint32      `json:"max_total_octets"`
 	ServiceType      ServiceType `json:"service_type"`
 	IsVoucher        bool        `json:"is_voucher"`
-	VoucherPackageID string      `json:"voucher_package_id,omitempty"`
+	VoucherPackageID *string     `json:"voucher_package_id,omitempty"`
 	ExpiresAt        *time.Time  `json:"expires_at,omitempty"`
 	CreatedAt        time.Time   `json:"created_at"`
 	UpdatedAt        time.Time   `json:"updated_at"`
 }
 
 func SubscriberFromUser(u RadiusUser) Subscriber {
+	var pkgID *string
+	if u.VoucherPackageID != nil && *u.VoucherPackageID != "" {
+		pkgID = u.VoucherPackageID
+	}
 	return Subscriber{
 		ID:               u.ID,
 		Username:         u.Username,
@@ -129,7 +133,7 @@ func SubscriberFromUser(u RadiusUser) Subscriber {
 		MaxTotalOctets:   u.MaxTotalOctets,
 		ServiceType:      u.ServiceType,
 		IsVoucher:        u.IsVoucher,
-		VoucherPackageID: u.VoucherPackageID,
+		VoucherPackageID: pkgID,
 		ExpiresAt:        u.ExpiresAt,
 		CreatedAt:        u.CreatedAt,
 		UpdatedAt:        u.UpdatedAt,

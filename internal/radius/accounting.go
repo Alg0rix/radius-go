@@ -2,6 +2,7 @@ package radius
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2866"
+	"layeh.com/radius/rfc2869"
 )
 
 func (s *Service) handleAccounting(w radius.ResponseWriter, r *radius.Request) {
@@ -81,6 +83,22 @@ func (s *Service) applyAcctUpdate(r *radius.Request, username, sessionID string,
 	}
 	if v, err := rfc2866.AcctSessionTime_Lookup(r.Packet); err == nil {
 		sessionTime = int64(v)
+	}
+
+	// Combine 32-bit counters with RFC 2869 gigawords for 64-bit totals.
+	if v, err := rfc2869.AcctInputGigawords_Lookup(r.Packet); err == nil {
+		total := uint64(v)*4294967296 + uint64(inputOctets)
+		if total > math.MaxInt64 {
+			total = math.MaxInt64
+		}
+		inputOctets = int64(total)
+	}
+	if v, err := rfc2869.AcctOutputGigawords_Lookup(r.Packet); err == nil {
+		total := uint64(v)*4294967296 + uint64(outputOctets)
+		if total > math.MaxInt64 {
+			total = math.MaxInt64
+		}
+		outputOctets = int64(total)
 	}
 
 	var (

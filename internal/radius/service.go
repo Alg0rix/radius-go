@@ -187,10 +187,33 @@ func (s *Service) refreshFromDB(ctx context.Context) error {
 	}
 
 	s.mu.Lock()
-	s.subscribers = make(map[string]domain.RadiusUser, len(users))
+	newSubscribers := make(map[string]domain.RadiusUser, len(users))
 	for _, u := range users {
-		s.subscribers[u.Username] = u
+		// Preserve in-memory voucher usage counters when they are ahead of DB
+		// (accounting updates are async; usage only increases).
+		if existing, ok := s.subscribers[u.Username]; ok {
+			if existing.DataBytesUsed > u.DataBytesUsed {
+				u.DataBytesUsed = existing.DataBytesUsed
+			}
+			if existing.UsageSecondsUsed > u.UsageSecondsUsed {
+				u.UsageSecondsUsed = existing.UsageSecondsUsed
+			}
+			// Once disabled in-memory (limit hit), stay disabled until explicitly re-enabled.
+			if !existing.Enabled {
+				u.Enabled = false
+			}
+			// Preserve expiry timestamps set on first login before async DB write completes.
+			if existing.FirstLoginAt != nil {
+				u.FirstLoginAt = existing.FirstLoginAt
+			}
+			if existing.ExpiresAt != nil {
+				u.ExpiresAt = existing.ExpiresAt
+			}
+		}
+		newSubscribers[u.Username] = u
 	}
+	s.subscribers = newSubscribers
+
 	s.nases = make(map[string]domain.NAS, len(nases))
 	for _, n := range nases {
 		if n.Enabled {

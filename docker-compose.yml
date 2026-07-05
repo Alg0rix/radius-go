@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: radius-go-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: radius
+      POSTGRES_PASSWORD: radius
+      POSTGRES_DB: radius
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radius -d radius"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  radius-go:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: radius-go-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_DSN: "postgres://radius:radius@postgres:5432/radius?sslmode=disable"
+      INTERNAL_SECRET: "change-me-in-production"
+      HTTP_PORT: "8083"
+      RADIUS_AUTH_PORT: "1812"
+      RADIUS_ACCT_PORT: "1813"
+      RADIUS_COA_PORT: "3799"
+      ENABLE_COA: "true"
+      LOG_FORMAT: "json"
+      DB_REFRESH_INTERVAL: "60"
+      SESSION_CLEANUP_PERIOD: "300"
+      STALE_SESSION_TIMEOUT: "86400"
+    ports:
+      - "8083:8083/tcp"
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+      - "3799:3799/udp"
+
+volumes:
+  postgres_data:

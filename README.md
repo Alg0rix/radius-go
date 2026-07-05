@@ -72,6 +72,60 @@ The server listens on:
 - **UDP** `:1813` — RADIUS accounting
 - **UDP** `:3799` — RADIUS CoA (opt-in via `ENABLE_COA=true`)
 
+### Docker
+
+A ready-to-run `docker-compose.yml` is included. It starts PostgreSQL and the radius-go API with migrations applied automatically.
+
+```bash
+# Start everything
+docker compose up -d
+
+# View logs
+docker compose logs -f radius-go
+
+# Stop everything
+docker compose down
+
+# Stop and remove data volume
+docker compose down -v
+```
+
+The default internal secret in Docker is `change-me-in-production`. Override it before using in production:
+
+```bash
+INTERNAL_SECRET="$(openssl rand -hex 32)" docker compose up -d
+```
+
+### Integration tests
+
+A full end-to-end integration test suite runs inside Docker and exercises:
+
+- NAS CRUD via `radiusctl`
+- Subscriber CRUD via `radiusctl`
+- RADIUS authentication (Access-Accept / Access-Reject) via `radclient`
+- RADIUS accounting start/interim/stop
+- Session listing and cleanup
+- Voucher package creation, voucher generation, voucher auth, and voucher balance tracking
+
+```bash
+# Start the main stack
+docker compose up -d
+
+# Run integration tests (uses a separate test container with radclient + radiusctl)
+docker compose -p radius-go -f tests/docker-compose.yml run --rm integration-test
+
+# Or build and run tests in one command
+docker compose -p radius-go -f tests/docker-compose.yml run --rm --build integration-test
+```
+
+You can also run the script locally against a running server:
+
+```bash
+export RADIUS_SERVER=http://localhost:8083
+export RADIUS_SECRET=change-me-in-production
+bash scripts/integration-test.sh
+```
+
 ## Configuration
 
 | Env | Default | Purpose |
