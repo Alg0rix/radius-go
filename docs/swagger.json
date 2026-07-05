@@ -1,0 +1,1665 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "RADIUS server with HTTP management API.\nManagement endpoints require the X-Internal-Secret header.",
+        "title": "radius-go API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8083",
+    "basePath": "/api/v1",
+    "paths": {
+        "/radius/nases": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "description": "List all configured Network Access Servers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NAS"
+                ],
+                "summary": "List NAS devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.NAS"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "description": "Register a new Network Access Server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NAS"
+                ],
+                "summary": "Create NAS device",
+                "parameters": [
+                    {
+                        "description": "NAS details",
+                        "name": "nas",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.CreateNASRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.NAS"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/nases/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NAS"
+                ],
+                "summary": "Update NAS device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NAS UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated NAS fields",
+                        "name": "nas",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.UpdateNASRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.NAS"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NAS"
+                ],
+                "summary": "Delete NAS device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NAS UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "List active sessions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.RadiusSession"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/sessions/cleanup": {
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Cleanup stale sessions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_radius.CleanupResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/sessions/disconnect": {
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Disconnect user sessions (PoD)",
+                "parameters": [
+                    {
+                        "description": "Disconnect request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.DisconnectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/sessions/reconcile": {
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Reconcile sessions from DB into memory",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/status": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Status"
+                ],
+                "summary": "Server status and counters",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_radius.Status"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/subscribers": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscribers"
+                ],
+                "summary": "List subscribers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.Subscriber"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscribers"
+                ],
+                "summary": "Create subscriber",
+                "parameters": [
+                    {
+                        "description": "Subscriber fields",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.Subscriber"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/subscribers/coa-change": {
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Change user profile via CoA",
+                "parameters": [
+                    {
+                        "description": "CoA change request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.CoAChangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_radius.CoaChangeResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/radius/subscribers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscribers"
+                ],
+                "summary": "Update subscriber",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated fields",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.Subscriber"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscribers"
+                ],
+                "summary": "Delete subscriber",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/voucher-packages": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "VoucherPackages"
+                ],
+                "summary": "List voucher packages",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.VoucherPackage"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "VoucherPackages"
+                ],
+                "summary": "Create voucher package",
+                "parameters": [
+                    {
+                        "description": "Package fields",
+                        "name": "pkg",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.CreateVoucherPackageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.VoucherPackage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/voucher-packages/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "VoucherPackages"
+                ],
+                "summary": "Update voucher package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated fields",
+                        "name": "pkg",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.UpdateVoucherPackageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.VoucherPackage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "VoucherPackages"
+                ],
+                "summary": "Delete voucher package",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "List vouchers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.Subscriber"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/generate": {
+            "post": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Generate voucher(s)",
+                "parameters": [
+                    {
+                        "description": "Generation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.GenerateVoucherRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_radius.GeneratedVoucher"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/{code}/balance": {
+            "get": {
+                "security": [
+                    {
+                        "InternalSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Get voucher remaining balance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Voucher code (username)",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.VoucherBalance"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_your-org_radius-go_internal_runtime.Envelope"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_your-org_radius-go_internal_domain.CoAChangeRequest": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.CreateNASRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.CreateUserRequest": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "framed_ip": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "idle_timeout": {
+                    "type": "integer"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "type": "string"
+                },
+                "session_timeout": {
+                    "type": "integer"
+                },
+                "simultaneous_use": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.CreateVoucherPackageRequest": {
+            "type": "object",
+            "properties": {
+                "data_cap_bytes": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "max_concurrent_users": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "speed_download_kbps": {
+                    "type": "integer"
+                },
+                "speed_upload_kbps": {
+                    "type": "integer"
+                },
+                "time_limit_seconds": {
+                    "type": "integer"
+                },
+                "time_limit_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.DisconnectRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.GenerateVoucherRequest": {
+            "type": "object",
+            "properties": {
+                "code_format": {
+                    "description": "\"random\" or \"custom\"",
+                    "type": "string"
+                },
+                "code_length": {
+                    "description": "for random",
+                    "type": "integer"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "custom_code": {
+                    "description": "for custom",
+                    "type": "string"
+                },
+                "custom_password": {
+                    "description": "for custom",
+                    "type": "string"
+                },
+                "package_id": {
+                    "type": "string"
+                },
+                "password_mode": {
+                    "description": "\"same_as_user\", \"random\", \"custom\"",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.NAS": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.RadiusSession": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "called_station": {
+                    "type": "string"
+                },
+                "calling_station": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "framed_ip": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "input_octets": {
+                    "type": "integer"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "nas_id": {
+                    "type": "string"
+                },
+                "nas_identifier": {
+                    "type": "string"
+                },
+                "nas_ip": {
+                    "type": "string"
+                },
+                "output_octets": {
+                    "type": "integer"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.ServiceType"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "session_status": {
+                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.SessionState"
+                },
+                "session_time": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "stop_time": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.ServiceType": {
+            "type": "string",
+            "enum": [
+                "framed",
+                "login"
+            ],
+            "x-enum-varnames": [
+                "ServiceTypeFramed",
+                "ServiceTypeLogin"
+            ]
+        },
+        "github_com_your-org_radius-go_internal_domain.SessionState": {
+            "type": "string",
+            "enum": [
+                "active",
+                "stopped",
+                "stale"
+            ],
+            "x-enum-varnames": [
+                "SessionStateActive",
+                "SessionStateStop",
+                "SessionStateStale"
+            ]
+        },
+        "github_com_your-org_radius-go_internal_domain.Subscriber": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "framed_ip": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idle_timeout": {
+                    "type": "integer"
+                },
+                "is_voucher": {
+                    "type": "boolean"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.ServiceType"
+                },
+                "session_timeout": {
+                    "type": "integer"
+                },
+                "simultaneous_use": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "voucher_package_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.TimeLimitType": {
+            "type": "string",
+            "enum": [
+                "calendar",
+                "usage"
+            ],
+            "x-enum-varnames": [
+                "TimeLimitCalendar",
+                "TimeLimitUsage"
+            ]
+        },
+        "github_com_your-org_radius-go_internal_domain.UpdateNASRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "framed_ip": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "idle_timeout": {
+                    "type": "integer"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "type": "string"
+                },
+                "session_timeout": {
+                    "type": "integer"
+                },
+                "simultaneous_use": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.UpdateVoucherPackageRequest": {
+            "type": "object",
+            "properties": {
+                "data_cap_bytes": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "max_concurrent_users": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "speed_download_kbps": {
+                    "type": "integer"
+                },
+                "speed_upload_kbps": {
+                    "type": "integer"
+                },
+                "time_limit_seconds": {
+                    "type": "integer"
+                },
+                "time_limit_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.VoucherBalance": {
+            "type": "object",
+            "properties": {
+                "data_bytes_remaining": {
+                    "type": "integer"
+                },
+                "data_bytes_used": {
+                    "type": "integer"
+                },
+                "data_cap_bytes": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "first_login_at": {
+                    "type": "string"
+                },
+                "package_name": {
+                    "type": "string"
+                },
+                "time_limit_seconds": {
+                    "type": "integer"
+                },
+                "time_limit_type": {
+                    "type": "string"
+                },
+                "usage_seconds_remaining": {
+                    "type": "integer"
+                },
+                "usage_seconds_used": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_domain.VoucherPackage": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "data_cap_bytes": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "max_concurrent_users": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "speed_download_kbps": {
+                    "type": "integer"
+                },
+                "speed_upload_kbps": {
+                    "type": "integer"
+                },
+                "time_limit_seconds": {
+                    "type": "integer"
+                },
+                "time_limit_type": {
+                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.TimeLimitType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_your-org_radius-go_internal_runtime.Envelope": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {},
+                "meta": {},
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_radius.CleanupResult": {
+            "type": "object",
+            "properties": {
+                "active_sessions_kept": {
+                    "type": "integer"
+                },
+                "cleaned_at": {
+                    "type": "string"
+                },
+                "stale_sessions_cleaned": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_radius.CoaChangeResult": {
+            "type": "object",
+            "properties": {
+                "disconnected_count": {
+                    "type": "integer"
+                },
+                "failed_nas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_radius.GeneratedVoucher": {
+            "type": "object",
+            "properties": {
+                "bandwidth_max_down": {
+                    "type": "integer"
+                },
+                "bandwidth_max_up": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "framed_ip": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idle_timeout": {
+                    "type": "integer"
+                },
+                "is_voucher": {
+                    "type": "boolean"
+                },
+                "max_total_octets": {
+                    "type": "integer"
+                },
+                "mikrotik_group": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "$ref": "#/definitions/github_com_your-org_radius-go_internal_domain.ServiceType"
+                },
+                "session_timeout": {
+                    "type": "integer"
+                },
+                "simultaneous_use": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "voucher_package_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_radius.Status": {
+            "type": "object",
+            "properties": {
+                "acct_requests": {
+                    "type": "integer"
+                },
+                "active_sessions": {
+                    "type": "integer"
+                },
+                "auth_accepts": {
+                    "type": "integer"
+                },
+                "auth_rejects": {
+                    "type": "integer"
+                },
+                "auth_requests": {
+                    "type": "integer"
+                },
+                "health": {
+                    "type": "string"
+                },
+                "nas_count": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "subscriber_count": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "InternalSecret": {
+            "type": "apiKey",
+            "name": "X-Internal-Secret",
+            "in": "header"
+        }
+    }
+}
