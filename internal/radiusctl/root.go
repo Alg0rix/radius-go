@@ -24,7 +24,8 @@ Examples:
   radiusctl nas list
   radiusctl subscriber create --username alice --password secret
   radiusctl session disconnect --username alice
-  radiusctl voucher package list`,
+  radiusctl voucher package list
+  radiusctl pppoe-profile list`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -34,6 +35,7 @@ Examples:
 		subscriberCmd(),
 		sessionCmd(),
 		voucherCmd(),
+		pppoeProfileCmd(),
 	)
 	return root
 }

@@ -15,53 +15,35 @@ const (
 	pfSenseBandwidthMaxUp   byte = 1
 	pfSenseBandwidthMaxDown byte = 2
 	pfSenseMaxTotalOctets   byte = 3
+	pfSenseDNS1             byte = 4
+	pfSenseDNS2             byte = 5
 )
 
 // --- setters for RADIUS response packets ---
 
 // PfSenseBandwidthMaxUp_Set adds the pfSense-Bandwidth-Max-Up VSA.
 func PfSenseBandwidthMaxUp_Set(p *radius.Packet, value uint32) error {
-	if value == 0 {
-		return nil
-	}
-	return pfSenseVSASetUint32(p, pfSenseBandwidthMaxUp, value)
+	return vsaSetUint32(p, pfSenseVendorID, pfSenseBandwidthMaxUp, value)
 }
 
 // PfSenseBandwidthMaxDown_Set adds the pfSense-Bandwidth-Max-Down VSA.
 func PfSenseBandwidthMaxDown_Set(p *radius.Packet, value uint32) error {
-	if value == 0 {
-		return nil
-	}
-	return pfSenseVSASetUint32(p, pfSenseBandwidthMaxDown, value)
+	return vsaSetUint32(p, pfSenseVendorID, pfSenseBandwidthMaxDown, value)
 }
 
 // PfSenseMaxTotalOctets_Set adds the pfSense-Max-Total-Octets VSA.
 func PfSenseMaxTotalOctets_Set(p *radius.Packet, value uint32) error {
-	if value == 0 {
-		return nil
-	}
-	return pfSenseVSASetUint32(p, pfSenseMaxTotalOctets, value)
+	return vsaSetUint32(p, pfSenseVendorID, pfSenseMaxTotalOctets, value)
 }
 
-// --- internal helpers ---
-
-func pfSenseVSASetUint32(p *radius.Packet, vendorType byte, value uint32) error {
-	attr, err := makePfSenseVSA(vendorType, value)
-	if err != nil {
-		return err
-	}
-	p.Add(rfc2865.VendorSpecific_Type, attr)
-	return nil
+// PfSenseDNS1_Set adds the pfSense-Primary-DNS VSA.
+func PfSenseDNS1_Set(p *radius.Packet, ip uint32) error {
+	return vsaSetUint32(p, pfSenseVendorID, pfSenseDNS1, ip)
 }
 
-// makePfSenseVSA builds a vendor-specific attribute for uint32 values.
-// Wire format: vendor-type (1 byte) + length (1 byte) + 4-byte big-endian uint32.
-func makePfSenseVSA(vendorType byte, value uint32) (radius.Attribute, error) {
-	sub := make([]byte, 6) // 1(vendor-type) + 1(length) + 4(value)
-	sub[0] = vendorType
-	sub[1] = 6
-	binary.BigEndian.PutUint32(sub[2:], value)
-	return radius.NewVendorSpecific(pfSenseVendorID, sub)
+// PfSenseDNS2_Set adds the pfSense-Secondary-DNS VSA.
+func PfSenseDNS2_Set(p *radius.Packet, ip uint32) error {
+	return vsaSetUint32(p, pfSenseVendorID, pfSenseDNS2, ip)
 }
 
 // pfSenseVSAGetUint32 extracts a uint32 VSA value from a RADIUS packet.

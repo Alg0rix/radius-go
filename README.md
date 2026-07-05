@@ -13,6 +13,7 @@ Uses [layeh.com/radius](https://layeh.com/radius) for the RADIUS protocol, [labs
 
 - [About The Project](#about-the-project)
   - [Built With](#built-with)
+  - [Features](#features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -35,6 +36,19 @@ Uses [layeh.com/radius](https://layeh.com/radius) for the RADIUS protocol, [labs
 - [![Echo](https://img.shields.io/badge/Echo-v4-00ADD8?logo=go&logoColor=white)](https://echo.labstack.com/)
 - [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 - [![radius](https://img.shields.io/badge/layeh.com%2Fradius-RADIUS-blue)](https://layeh.com/radius)
+
+### Features
+
+| Feature | Description |
+|--------|-------------|
+| RADIUS AAA | Authentication, accounting, and CoA over UDP. |
+| HTTP management API | REST endpoints for NAS, subscribers, sessions, voucher packages, and PPPoE profiles. |
+| Subscriber types | Framed (hotspot/voucher) and Login (PPPoE) service types. |
+| PPPoE profiles | Reusable PPP-layer policies with rate-limit, bandwidth, session-timeout, idle-timeout, and data caps. |
+| Hotspot profiles | Voucher packages extended with address pool and DNS overrides. |
+| Per-user overrides | Subscriber-level RADIUS attributes take precedence over profile defaults. |
+| Multi-vendor NAS | MikroTik, Microsoft, and pfSense VSAs. |
+| Stateless / HA-ready | PostgreSQL is the single source of truth; multiple instances can run behind a load balancer. |
 
 ## Getting Started
 
@@ -170,6 +184,11 @@ DELETE /api/v1/voucher-packages/:id
 GET    /api/v1/vouchers
 POST   /api/v1/vouchers/generate
 GET    /api/v1/vouchers/:code/balance
+GET    /api/v1/pppoe-profiles
+POST   /api/v1/pppoe-profiles
+GET    /api/v1/pppoe-profiles/:id
+PUT    /api/v1/pppoe-profiles/:id
+DELETE /api/v1/pppoe-profiles/:id
 ```
 
 Swagger UI: `http://localhost:8083/swagger/index.html`
@@ -199,6 +218,7 @@ radiusctl session coa-change --username alice --rate-limit 5M/5M
 radiusctl voucher package list
 radiusctl voucher generate --package-id <uuid> --count 5
 radiusctl voucher balance --code <voucher-username>
+radiusctl pppoe-profile list
 ```
 
 Commands mirror the API:
@@ -210,6 +230,7 @@ radiusctl subscriber {list,create,update,delete}
 radiusctl session {list,disconnect,coa-change,cleanup,reconcile}
 radiusctl voucher {list,generate,balance}
 radiusctl voucher package {list,create,update,delete}
+radiusctl pppoe-profile {list,create,get,update,delete}
 ```
 
 ## Testing
@@ -253,4 +274,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 - [layeh.com/radius](https://layeh.com/radius) — RADIUS protocol library
 - [labstack/echo](https://echo.labstack.com/) — HTTP web framework
 - [jackc/pgx](https://github.com/jackc/pgx) — PostgreSQL driver
-- [Best-README-Template](https://github.com/othneildrew/Best-README-Template) — README structure inspiration

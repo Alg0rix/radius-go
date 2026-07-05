@@ -52,9 +52,9 @@ func subscriberListCmd() *cobra.Command {
 
 func subscriberCreateCmd() *cobra.Command {
 	var (
-		username, password, fullname, email, framedIP, group, rate, service string
-		simulUse, sessTimeout, idleTimeout                                  int
-		bwUp, bwDown, maxOctets                                             uint32
+		username, password, fullname, email, framedIP, group, rate, service, pppoeProfileID string
+		simulUse, sessTimeout, idleTimeout                                               int
+		bwUp, bwDown, maxOctets                                                          uint32
 	)
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -75,6 +75,7 @@ func subscriberCreateCmd() *cobra.Command {
 				BandwidthMaxDown: bwDown,
 				MaxTotalOctets:   maxOctets,
 				ServiceType:      service,
+				PPPoEProfileID:   pppoeProfileID,
 			}
 			s, err := client.CreateSubscriber(cmd.Context(), req)
 			if err != nil {
@@ -102,6 +103,7 @@ func subscriberCreateCmd() *cobra.Command {
 	cmd.Flags().Uint32Var(&bwUp, "bw-up", 0, "Max upload bandwidth")
 	cmd.Flags().Uint32Var(&bwDown, "bw-down", 0, "Max download bandwidth")
 	cmd.Flags().Uint32Var(&maxOctets, "max-octets", 0, "Max total octets")
+	cmd.Flags().StringVar(&pppoeProfileID, "pppoe-profile-id", "", "PPPoE profile UUID")
 	cmd.MarkFlagRequired("username")
 	cmd.MarkFlagRequired("password")
 	return cmd
@@ -109,10 +111,10 @@ func subscriberCreateCmd() *cobra.Command {
 
 func subscriberUpdateCmd() *cobra.Command {
 	var (
-		id, username, password, fullname, email, framedIP, group, rate, service string
-		simulUse, sessTimeout, idleTimeout                                      int
-		bwUp, bwDown, maxOctets                                                 uint32
-		enabled, disabled                                                       bool
+		id, username, password, fullname, email, framedIP, group, rate, service, pppoeProfileID string
+		simulUse, sessTimeout, idleTimeout                                                     int
+		bwUp, bwDown, maxOctets                                                                uint32
+		enabled, disabled                                                                      bool
 	)
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -149,6 +151,9 @@ func subscriberUpdateCmd() *cobra.Command {
 			if cmd.Flags().Changed("max-octets") {
 				req.MaxTotalOctets = &maxOctets
 			}
+			if cmd.Flags().Changed("pppoe-profile-id") {
+				req.PPPoEProfileID = &pppoeProfileID
+			}
 			if enabled || disabled {
 				v := enabled
 				req.Enabled = &v
@@ -180,6 +185,7 @@ func subscriberUpdateCmd() *cobra.Command {
 	cmd.Flags().Uint32Var(&bwUp, "bw-up", 0, "Max upload bandwidth")
 	cmd.Flags().Uint32Var(&bwDown, "bw-down", 0, "Max download bandwidth")
 	cmd.Flags().Uint32Var(&maxOctets, "max-octets", 0, "Max total octets")
+	cmd.Flags().StringVar(&pppoeProfileID, "pppoe-profile-id", "", "PPPoE profile UUID (empty to clear)")
 	cmd.Flags().BoolVar(&enabled, "enable", false, "Enable the subscriber")
 	cmd.Flags().BoolVar(&disabled, "disable", false, "Disable the subscriber")
 	cmd.MarkFlagRequired("id")

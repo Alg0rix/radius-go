@@ -47,6 +47,15 @@ func (s *Service) handleAcctStart(r *radius.Request, username, sessionID string)
 		framedIP = ip.String()
 	}
 
+	s.mu.RLock()
+	user, ok := s.subscribers[username]
+	s.mu.RUnlock()
+
+	serviceType := domain.ServiceTypeFramed
+	if ok {
+		serviceType = user.ServiceType
+	}
+
 	sess := domain.RadiusSession{
 		ID:             uuid.New().String(),
 		SessionID:      sessionID,
@@ -57,7 +66,7 @@ func (s *Service) handleAcctStart(r *radius.Request, username, sessionID string)
 		FramedIP:       framedIP,
 		CallingStation: rfc2865.CallingStationID_GetString(r.Packet),
 		CalledStation:  rfc2865.CalledStationID_GetString(r.Packet),
-		ServiceType:    domain.ServiceTypeFramed,
+		ServiceType:    serviceType,
 		SessionStatus:  domain.SessionStateActive,
 		StartTime:      now,
 		LastUpdate:     now,

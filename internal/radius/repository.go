@@ -22,6 +22,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 const userSelectCols = `id, username, password_hash, full_name, email, enabled,
 	simultaneous_use, session_timeout, idle_timeout, framed_ip, mikrotik_group,
 	rate_limit, bandwidth_max_up, bandwidth_max_down, max_total_octets,
+	pppoe_profile_id,
 	is_voucher, voucher_package_id, first_login_at, expires_at,
 	usage_seconds_used, data_bytes_used, speed_upload_kbps, speed_download_kbps,
 	voucher_time_limit_type, voucher_time_limit_seconds, voucher_data_cap_bytes,
@@ -33,6 +34,7 @@ func scanUser(row pgx.Row) (*domain.RadiusUser, error) {
 	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.FullName, &u.Email, &u.Enabled,
 		&u.SimultaneousUse, &u.SessionTimeout, &u.IdleTimeout, &u.FramedIP, &u.MikrotikGroup,
 		&u.RateLimit, &u.BandwidthMaxUp, &u.BandwidthMaxDown, &u.MaxTotalOctets,
+		&u.PPPoEProfileID,
 		&u.IsVoucher, &u.VoucherPackageID, &u.FirstLoginAt, &u.ExpiresAt,
 		&u.UsageSecondsUsed, &u.DataBytesUsed, &u.SpeedUploadKbps, &u.SpeedDownloadKbps,
 		&u.VoucherTimeLimitType, &u.VoucherTimeLimitSeconds, &u.VoucherDataCapBytes,
@@ -51,6 +53,7 @@ func scanUsers(rows pgx.Rows) ([]domain.RadiusUser, error) {
 		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.FullName, &u.Email, &u.Enabled,
 			&u.SimultaneousUse, &u.SessionTimeout, &u.IdleTimeout, &u.FramedIP, &u.MikrotikGroup,
 			&u.RateLimit, &u.BandwidthMaxUp, &u.BandwidthMaxDown, &u.MaxTotalOctets,
+			&u.PPPoEProfileID,
 			&u.IsVoucher, &u.VoucherPackageID, &u.FirstLoginAt, &u.ExpiresAt,
 			&u.UsageSecondsUsed, &u.DataBytesUsed, &u.SpeedUploadKbps, &u.SpeedDownloadKbps,
 			&u.VoucherTimeLimitType, &u.VoucherTimeLimitSeconds, &u.VoucherDataCapBytes,
@@ -77,15 +80,17 @@ func (r *Repository) CreateUser(ctx context.Context, user domain.RadiusUser) err
 	_, err := r.db.Exec(ctx, `INSERT INTO radius_users (id, username, password_hash, full_name, email, enabled,
 		simultaneous_use, session_timeout, idle_timeout, framed_ip, mikrotik_group,
 		rate_limit, bandwidth_max_up, bandwidth_max_down, max_total_octets,
+		pppoe_profile_id,
 		is_voucher, voucher_package_id, first_login_at, expires_at,
 		usage_seconds_used, data_bytes_used, speed_upload_kbps, speed_download_kbps,
 		voucher_time_limit_type, voucher_time_limit_seconds, voucher_data_cap_bytes,
 		service_type)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
-		        $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`,
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+		        $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)`,
 		user.ID, user.Username, user.PasswordHash, user.FullName, user.Email, user.Enabled,
 		user.SimultaneousUse, user.SessionTimeout, user.IdleTimeout, user.FramedIP, user.MikrotikGroup,
 		user.RateLimit, user.BandwidthMaxUp, user.BandwidthMaxDown, user.MaxTotalOctets,
+		user.PPPoEProfileID,
 		user.IsVoucher, user.VoucherPackageID, user.FirstLoginAt, user.ExpiresAt,
 		user.UsageSecondsUsed, user.DataBytesUsed, user.SpeedUploadKbps, user.SpeedDownloadKbps,
 		user.VoucherTimeLimitType, user.VoucherTimeLimitSeconds, user.VoucherDataCapBytes,
@@ -97,13 +102,14 @@ func (r *Repository) UpdateUser(ctx context.Context, user domain.RadiusUser) err
 	_, err := r.db.Exec(ctx, `UPDATE radius_users SET username=$1, password_hash=$2, full_name=$3, email=$4,
 		enabled=$5, simultaneous_use=$6, session_timeout=$7, idle_timeout=$8, framed_ip=$9,
 		mikrotik_group=$10, rate_limit=$11, bandwidth_max_up=$12, bandwidth_max_down=$13,
-		max_total_octets=$14, is_voucher=$15, voucher_package_id=$16,
-		usage_seconds_used=$17, data_bytes_used=$18, speed_upload_kbps=$19, speed_download_kbps=$20,
-		voucher_time_limit_type=$21, voucher_time_limit_seconds=$22, voucher_data_cap_bytes=$23,
-		service_type=$24, updated_at=now() WHERE id=$25`,
+		max_total_octets=$14, pppoe_profile_id=$15,
+		is_voucher=$16, voucher_package_id=$17,
+		usage_seconds_used=$18, data_bytes_used=$19, speed_upload_kbps=$20, speed_download_kbps=$21,
+		voucher_time_limit_type=$22, voucher_time_limit_seconds=$23, voucher_data_cap_bytes=$24,
+		service_type=$25, updated_at=now() WHERE id=$26`,
 		user.Username, user.PasswordHash, user.FullName, user.Email, user.Enabled,
 		user.SimultaneousUse, user.SessionTimeout, user.IdleTimeout, user.FramedIP, user.MikrotikGroup,
-		user.RateLimit, user.BandwidthMaxUp, user.BandwidthMaxDown, user.MaxTotalOctets,
+		user.RateLimit, user.BandwidthMaxUp, user.BandwidthMaxDown, user.MaxTotalOctets, user.PPPoEProfileID,
 		user.IsVoucher, user.VoucherPackageID,
 		user.UsageSecondsUsed, user.DataBytesUsed, user.SpeedUploadKbps, user.SpeedDownloadKbps,
 		user.VoucherTimeLimitType, user.VoucherTimeLimitSeconds, user.VoucherDataCapBytes,
@@ -123,6 +129,85 @@ func (r *Repository) GetUserByUsername(ctx context.Context, username string) (*d
 
 func (r *Repository) DeleteUser(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM radius_users WHERE id=$1`, id)
+	return err
+}
+
+// --- PPPoE Profiles ---
+
+const pppoeProfileSelectCols = `id, name, description, framed_ip_pool, framed_ip_netmask,
+	primary_dns, secondary_dns, ppp_compression, mtu, mru, keepalive_interval,
+	rate_limit, bandwidth_max_up, bandwidth_max_down, session_timeout, idle_timeout,
+	max_total_octets, enabled, created_at, updated_at`
+
+func scanPPPoEProfile(row pgx.Row) (*domain.PPPoEProfile, error) {
+	var p domain.PPPoEProfile
+	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.FramedIPPool, &p.FramedIPNetmask,
+		&p.PrimaryDNS, &p.SecondaryDNS, &p.PPPCompression, &p.MTU, &p.MRU, &p.KeepaliveInterval,
+		&p.RateLimit, &p.BandwidthMaxUp, &p.BandwidthMaxDown, &p.SessionTimeout, &p.IdleTimeout,
+		&p.MaxTotalOctets, &p.Enabled, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("repo: scan pppoe profile: %w", err)
+	}
+	return &p, nil
+}
+
+func scanPPPoEProfiles(rows pgx.Rows) ([]domain.PPPoEProfile, error) {
+	var profiles []domain.PPPoEProfile
+	for rows.Next() {
+		var p domain.PPPoEProfile
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.FramedIPPool, &p.FramedIPNetmask,
+			&p.PrimaryDNS, &p.SecondaryDNS, &p.PPPCompression, &p.MTU, &p.MRU, &p.KeepaliveInterval,
+			&p.RateLimit, &p.BandwidthMaxUp, &p.BandwidthMaxDown, &p.SessionTimeout, &p.IdleTimeout,
+			&p.MaxTotalOctets, &p.Enabled, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("repo: scan pppoe profiles: %w", err)
+		}
+		profiles = append(profiles, p)
+	}
+	return profiles, rows.Err()
+}
+
+func (r *Repository) ListPPPoEProfiles(ctx context.Context) ([]domain.PPPoEProfile, error) {
+	rows, err := r.db.Query(ctx, `SELECT `+pppoeProfileSelectCols+` FROM pppoe_profiles ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list pppoe profiles: %w", err)
+	}
+	defer rows.Close()
+	return scanPPPoEProfiles(rows)
+}
+
+func (r *Repository) GetPPPoEProfile(ctx context.Context, id string) (*domain.PPPoEProfile, error) {
+	row := r.db.QueryRow(ctx, `SELECT `+pppoeProfileSelectCols+` FROM pppoe_profiles WHERE id=$1`, id)
+	return scanPPPoEProfile(row)
+}
+
+func (r *Repository) CreatePPPoEProfile(ctx context.Context, p domain.PPPoEProfile) error {
+	_, err := r.db.Exec(ctx, `INSERT INTO pppoe_profiles (id, name, description, framed_ip_pool,
+		framed_ip_netmask, primary_dns, secondary_dns, ppp_compression, mtu, mru, keepalive_interval,
+		rate_limit, bandwidth_max_up, bandwidth_max_down, session_timeout, idle_timeout,
+		max_total_octets, enabled)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+		p.ID, p.Name, p.Description, p.FramedIPPool, p.FramedIPNetmask,
+		p.PrimaryDNS, p.SecondaryDNS, p.PPPCompression, p.MTU, p.MRU, p.KeepaliveInterval,
+		p.RateLimit, p.BandwidthMaxUp, p.BandwidthMaxDown, p.SessionTimeout, p.IdleTimeout,
+		p.MaxTotalOctets, p.Enabled)
+	return err
+}
+
+func (r *Repository) UpdatePPPoEProfile(ctx context.Context, p domain.PPPoEProfile) error {
+	_, err := r.db.Exec(ctx, `UPDATE pppoe_profiles SET name=$1, description=$2, framed_ip_pool=$3,
+		framed_ip_netmask=$4, primary_dns=$5, secondary_dns=$6, ppp_compression=$7, mtu=$8, mru=$9,
+		keepalive_interval=$10, rate_limit=$11, bandwidth_max_up=$12, bandwidth_max_down=$13,
+		session_timeout=$14, idle_timeout=$15, max_total_octets=$16, enabled=$17, updated_at=now()
+		WHERE id=$18`,
+		p.Name, p.Description, p.FramedIPPool, p.FramedIPNetmask,
+		p.PrimaryDNS, p.SecondaryDNS, p.PPPCompression, p.MTU, p.MRU, p.KeepaliveInterval,
+		p.RateLimit, p.BandwidthMaxUp, p.BandwidthMaxDown, p.SessionTimeout, p.IdleTimeout,
+		p.MaxTotalOctets, p.Enabled, p.ID)
+	return err
+}
+
+func (r *Repository) DeletePPPoEProfile(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM pppoe_profiles WHERE id=$1`, id)
 	return err
 }
 

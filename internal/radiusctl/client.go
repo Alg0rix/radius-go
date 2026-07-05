@@ -247,3 +247,29 @@ func (c *Client) VoucherBalance(ctx context.Context, code string) (VoucherBalanc
 	err := c.do(ctx, http.MethodGet, "/api/v1/vouchers/"+code+"/balance", nil, &out)
 	return out, err
 }
+
+// --- PPPoE profiles ---
+
+func (c *Client) ListPPPoEProfiles(ctx context.Context) ([]PPPoEProfile, error) {
+	var out []PPPoEProfile
+	err := c.do(ctx, http.MethodGet, "/api/v1/pppoe-profiles", nil, &out)
+	return out, err
+}
+
+func (c *Client) CreatePPPoEProfile(ctx context.Context, req CreatePPPoEProfileRequest) (PPPoEProfile, error) {
+	var out PPPoEProfile
+	err := c.do(ctx, http.MethodPost, "/api/v1/pppoe-profiles", req, &out)
+	return out, err
+}
+
+func (c *Client) UpdatePPPoEProfile(ctx context.Context, id string, req UpdatePPPoEProfileRequest) (PPPoEProfile, error) {
+	var out PPPoEProfile
+	err := c.do(ctx, http.MethodPut, "/api/v1/pppoe-profiles/"+id, req, &out)
+	return out, err
+}
+
+func (c *Client) DeletePPPoEProfile(ctx context.Context, id string) (DeleteResult, error) {
+	var out DeleteResult
+	err := c.do(ctx, http.MethodDelete, "/api/v1/pppoe-profiles/"+id, nil, &out)
+	return out, err
+}

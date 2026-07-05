@@ -2,7 +2,7 @@
 
 ## Current state
 
-This repo is **not yet implemented**. Only `docs/plan.md` exists — read it first for the full design.
+This repo is implemented. Use `docs/adr/` for architecture decisions and this file for conventions.
 
 ## Hard rules (override the plan where they conflict)
 
@@ -25,8 +25,10 @@ This repo is **not yet implemented**. Only `docs/plan.md` exists — read it fir
 Single-binary server combining a RADIUS core and an HTTP management API:
 - **3 UDP PacketServers**: auth (port 1812), accounting (1813), CoA (3799)
 - **HTTP server** (default 8083): management REST API + health endpoints
-- **In-memory state**: NAS secrets, subscriber profiles, active sessions — refreshed from DB via ticker
-- **DB**: 3 tables (`radius_users`, `radius_nas`, `radius_sessions`), migrations run at startup
+- **In-memory state**: NAS secrets, subscriber profiles, PPPoE profiles, voucher packages, active sessions — refreshed from DB via ticker
+- **DB**: 5 tables (`radius_users`, `radius_nas`, `radius_sessions`, `voucher_packages`, `pppoe_profiles`), migrations run at startup
+- **Profile model**: `service_type=login` + `pppoe_profile_id` → PPPoE user (profile provides PPP-layer RADIUS attributes + per-session caps). `service_type=framed` + `voucher_package_id` → Hotspot user (voucher package IS the hotspot profile, extended with pool/DNS). The two assignment paths are mutually exclusive.
+- **Precedence**: per-user RADIUS attributes override profile defaults when set (FreeRADIUS `radreply` over `radgroupreply`); empty per-user fields fall through to the attached profile.
 
 ## Entry point
 
@@ -43,13 +45,17 @@ cmd/api/main.go → config.Load("radius") → app.Run(cfg)
 - **JSON envelope**: every response uses `{ success, data, meta, error }` via `runtime/jttp.go` helpers (`OK`, `Fail`, `Created`).
 - **Per-NAS shared secret**: RADIUS secrets are stored per-NAS in the `radius_nas` table, looked up by remote address at auth time via `radiusSecretSource.RADIUSSecret()`.
 - **Service type**: users have a `service_type` field (`framed` or `login`) — a flat toggle that avoids complex profile hierarchies.
-- **MikroTik VSA** (vendor 14988): `MikroTik-Rate-Limit` and `MikroTik-Group` attributes are supported.
+- **PPPoE profiles**: new `pppoe_profiles` entity attached via `radius_users.pppoe_profile_id`; provides PPP-layer attributes (Framed-Protocol, Framed-Pool, DNS, MTU/MRU, compression) plus per-session limits (rate-limit, bandwidth, session-timeout, idle-timeout, max-total-octets). Per-user values override profile values when set.
+- **Hotspot profiles**: the existing `voucher_packages` entity serves this role, extended with `address_pool`, `primary_dns`, `secondary_dns`.
+- **Mutual exclusion**: `voucher_package_id` and `pppoe_profile_id` cannot both be set on the same user.
+- **MikroTik VSA** (vendor 14988): `MikroTik-Rate-Limit`, `MikroTik-Group`, `MikroTik-Address-Pool`, `MikroTik-Total-Limit` attributes are supported.
+- **Microsoft VSA** (vendor 311): `MS-Primary-DNS-Server`, `MS-Secondary-DNS-Server` are emitted for DNS when configured.
 - **No singleton globals**: dependency injection via `Dependencies` struct, `*Service` receives `*Dependencies` + `config.Config`.
 - **HA-ready**: No sticky state between requests. In-memory caches are warm copies of DB data, refreshed via ticker — a second instance can start cold and become consistent without coordination. All mutable truth lives in PostgreSQL, so multiple instances can run behind a stateless load balancer (UDP for RADIUS, HTTP for API). Assume at least 2 instances will run side by side.
 
 ## What this project deliberately excludes
 
-- No license checks, Sentry, Redis, CHAP/MS-CHAPv2, PPPoE profiles, or isolation pool
+- No license checks, Sentry, Redis, CHAP/MS-CHAPv2, or isolation pool
 - No `runtime.NewID()` — use `uuid.New().String()`
 - No `netutil.Loopback` — use `fmt.Sprintf("127.0.0.1:%d", port)`
 - Single `Config` struct (no separate appconfig alias)
@@ -60,6 +66,18 @@ cmd/api/main.go → config.Load("radius") → app.Run(cfg)
 go build ./cmd/api            # verify build
 go run ./cmd/api              # start (needs DB_DSN + INTERNAL_SECRET env)
 ```
+
+## API additions
+
+```
+GET    /api/v1/pppoe-profiles
+POST   /api/v1/pppoe-profiles
+GET    /api/v1/pppoe-profiles/:id
+PUT    /api/v1/pppoe-profiles/:id
+DELETE /api/v1/pppoe-profiles/:id
+```
+
+A subscriber is assigned to a PPPoE profile via `POST /api/v1/radius/subscribers` or `PUT /api/v1/radius/subscribers/:id` with `pppoe_profile_id`.
 
 ## Testing with radclient
 

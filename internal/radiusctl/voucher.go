@@ -190,12 +190,13 @@ func voucherPackageListCmd() *cobra.Command {
 
 func voucherPackageCreateCmd() *cobra.Command {
 	var (
-		name, desc, timeLimitType string
-		price                     float64
-		speedUp, speedDown        int
-		dataCapBytes              int64
-		timeLimitSeconds          int
-		maxConcurrent             int
+		name, desc, timeLimitType       string
+		price                           float64
+		speedUp, speedDown              int
+		dataCapBytes                    int64
+		timeLimitSeconds                int
+		maxConcurrent                   int
+		addressPool, primaryDNS, secondaryDNS string
 	)
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -211,6 +212,9 @@ func voucherPackageCreateCmd() *cobra.Command {
 				TimeLimitType:      timeLimitType,
 				TimeLimitSeconds:   timeLimitSeconds,
 				MaxConcurrentUsers: maxConcurrent,
+				AddressPool:        addressPool,
+				PrimaryDNS:         primaryDNS,
+				SecondaryDNS:       secondaryDNS,
 			}
 			p, err := client.CreateVoucherPackage(cmd.Context(), req)
 			if err != nil {
@@ -233,19 +237,23 @@ func voucherPackageCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&timeLimitType, "time-limit-type", "usage", "Time limit type: calendar|usage")
 	cmd.Flags().IntVar(&timeLimitSeconds, "time-limit-seconds", 0, "Time limit (seconds)")
 	cmd.Flags().IntVar(&maxConcurrent, "max-concurrent", 0, "Max concurrent users")
+	cmd.Flags().StringVar(&addressPool, "address-pool", "", "Hotspot address pool name")
+	cmd.Flags().StringVar(&primaryDNS, "primary-dns", "", "Primary DNS server")
+	cmd.Flags().StringVar(&secondaryDNS, "secondary-dns", "", "Secondary DNS server")
 	cmd.MarkFlagRequired("name")
 	return cmd
 }
 
 func voucherPackageUpdateCmd() *cobra.Command {
 	var (
-		id, name, desc, timeLimitType string
-		price                         float64
-		speedUp, speedDown            int
-		dataCapBytes                  int64
-		timeLimitSeconds              int
-		maxConcurrent                 int
-		enabled, disabled             bool
+		id, name, desc, timeLimitType           string
+		price                                   float64
+		speedUp, speedDown                      int
+		dataCapBytes                            int64
+		timeLimitSeconds                        int
+		maxConcurrent                           int
+		addressPool, primaryDNS, secondaryDNS   string
+		enabled, disabled                       bool
 	)
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -282,6 +290,15 @@ func voucherPackageUpdateCmd() *cobra.Command {
 			if cmd.Flags().Changed("max-concurrent") {
 				req.MaxConcurrentUsers = &maxConcurrent
 			}
+			if cmd.Flags().Changed("address-pool") {
+				req.AddressPool = &addressPool
+			}
+			if cmd.Flags().Changed("primary-dns") {
+				req.PrimaryDNS = &primaryDNS
+			}
+			if cmd.Flags().Changed("secondary-dns") {
+				req.SecondaryDNS = &secondaryDNS
+			}
 			if enabled || disabled {
 				v := enabled
 				req.Enabled = &v
@@ -308,6 +325,9 @@ func voucherPackageUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&timeLimitType, "time-limit-type", "", "Time limit type: calendar|usage")
 	cmd.Flags().IntVar(&timeLimitSeconds, "time-limit-seconds", 0, "Time limit (seconds)")
 	cmd.Flags().IntVar(&maxConcurrent, "max-concurrent", 0, "Max concurrent users")
+	cmd.Flags().StringVar(&addressPool, "address-pool", "", "Hotspot address pool name")
+	cmd.Flags().StringVar(&primaryDNS, "primary-dns", "", "Primary DNS server")
+	cmd.Flags().StringVar(&secondaryDNS, "secondary-dns", "", "Secondary DNS server")
 	cmd.Flags().BoolVar(&enabled, "enable", false, "Enable the package")
 	cmd.Flags().BoolVar(&disabled, "disable", false, "Disable the package")
 	cmd.MarkFlagRequired("id")
@@ -350,6 +370,9 @@ func printVoucherPackage(p VoucherPackage) {
 		[2]string{"time_limit_type", p.TimeLimitType},
 		[2]string{"time_limit_seconds", itoa(p.TimeLimitSeconds)},
 		[2]string{"max_concurrent_users", itoa(p.MaxConcurrentUsers)},
+		[2]string{"address_pool", strOr(p.AddressPool, "-")},
+		[2]string{"primary_dns", strOr(p.PrimaryDNS, "-")},
+		[2]string{"secondary_dns", strOr(p.SecondaryDNS, "-")},
 		[2]string{"enabled", yesNo(p.Enabled)},
 	)
 }

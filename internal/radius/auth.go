@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -111,38 +112,75 @@ func (s *Service) handleAuth(w radius.ResponseWriter, r *radius.Request) {
 		rfc2865.ServiceType_Add(resp, rfc2865.ServiceType_Value_FramedUser)
 	}
 
-	if user.SessionTimeout > 0 {
-		rfc2865.SessionTimeout_Add(resp, rfc2865.SessionTimeout(user.SessionTimeout))
-	}
-	if user.IdleTimeout > 0 {
-		rfc2865.IdleTimeout_Add(resp, rfc2865.IdleTimeout(user.IdleTimeout))
-	}
-	if user.FramedIP != "" {
-		if ip := net.ParseIP(user.FramedIP); ip != nil {
-			rfc2865.FramedIPAddress_Add(resp, ip)
+	rateLimit := effectiveRateLimit(user)
+	bandwidthUp, bandwidthDown := effectiveBandwidth(user)
+	maxTotalOctets := effectiveMaxTotalOctets(user)
+	sessionTimeout := effectiveSessionTimeout(user)
+	idleTimeout := effectiveIdleTimeout(user)
+
+	// PPP-layer attributes for PPPoE profiles.
+	if user.ServiceType == domain.ServiceTypeLogin && user.PPPoEProfile != nil {
+		profile := user.PPPoEProfile
+		FramedProtocol_AddPPP(resp)
+		if profile.FramedIPPool != "" {
+			FramedPool_SetString(resp, profile.FramedIPPool)
+			MikrotikAddressPool_SetString(resp, profile.FramedIPPool)
+		} else if user.FramedIP != "" {
+			if ip := net.ParseIP(user.FramedIP); ip != nil {
+				rfc2865.FramedIPAddress_Add(resp, ip)
+			}
+		}
+		if profile.FramedIPNetmask != "" {
+			FramedIPNetmask_Add(resp, profile.FramedIPNetmask)
+		}
+		if profile.MTU > 0 {
+			FramedMTU_Set(resp, profile.MTU)
+		}
+		if profile.PPPCompression {
+			FramedCompression_AddStac(resp)
+		}
+		emitDNS(resp, profile.PrimaryDNS, profile.SecondaryDNS)
+	} else {
+		if user.FramedIP != "" {
+			if ip := net.ParseIP(user.FramedIP); ip != nil {
+				rfc2865.FramedIPAddress_Add(resp, ip)
+			}
 		}
 	}
 
-	// MikroTik rate-limit from per-user speed fields.
-	rateLimit := formatRateLimit(user)
+	// Hotspot voucher package extras.
+	if user.ServiceType == domain.ServiceTypeFramed && user.VoucherPackage != nil {
+		pkg := user.VoucherPackage
+		if pkg.AddressPool != "" {
+			FramedPool_SetString(resp, pkg.AddressPool)
+			MikrotikAddressPool_SetString(resp, pkg.AddressPool)
+		}
+		emitDNS(resp, pkg.PrimaryDNS, pkg.SecondaryDNS)
+	}
+
+	if sessionTimeout > 0 {
+		rfc2865.SessionTimeout_Add(resp, rfc2865.SessionTimeout(sessionTimeout))
+	}
+	if idleTimeout > 0 {
+		rfc2865.IdleTimeout_Add(resp, rfc2865.IdleTimeout(idleTimeout))
+	}
+
 	if rateLimit != "" {
 		MikrotikRateLimit_SetString(resp, rateLimit)
-	} else if user.RateLimit != "" {
-		MikrotikRateLimit_SetString(resp, user.RateLimit)
 	}
 	if user.MikrotikGroup != "" {
 		MikrotikGroup_SetString(resp, user.MikrotikGroup)
 	}
 
-	// pfSense/OPNsense VSAs.
-	if user.BandwidthMaxUp > 0 {
-		PfSenseBandwidthMaxUp_Set(resp, user.BandwidthMaxUp)
+	if bandwidthUp > 0 {
+		PfSenseBandwidthMaxUp_Set(resp, bandwidthUp)
 	}
-	if user.BandwidthMaxDown > 0 {
-		PfSenseBandwidthMaxDown_Set(resp, user.BandwidthMaxDown)
+	if bandwidthDown > 0 {
+		PfSenseBandwidthMaxDown_Set(resp, bandwidthDown)
 	}
-	if user.MaxTotalOctets > 0 {
-		PfSenseMaxTotalOctets_Set(resp, user.MaxTotalOctets)
+	if maxTotalOctets > 0 {
+		PfSenseMaxTotalOctets_Set(resp, maxTotalOctets)
+		MikrotikTotalLimit_Set(resp, maxTotalOctets)
 	}
 
 	// Session-Timeout for near-expiry vouchers (usage-based).
@@ -198,6 +236,78 @@ func formatRateLimit(u domain.RadiusUser) string {
 	up := formatKbps(u.SpeedUploadKbps)
 	down := formatKbps(u.SpeedDownloadKbps)
 	return fmt.Sprintf("%s/%s", up, down)
+}
+
+func formatBandwidthKbps(up, down int) string {
+	if up <= 0 && down <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s", formatKbps(up), formatKbps(down))
+}
+
+func effectiveRateLimit(user domain.RadiusUser) string {
+	if user.RateLimit != "" {
+		return user.RateLimit
+	}
+	if rl := formatRateLimit(user); rl != "" {
+		return rl
+	}
+	if user.PPPoEProfile != nil {
+		if user.PPPoEProfile.RateLimit != "" {
+			return user.PPPoEProfile.RateLimit
+		}
+		if rl := formatBandwidthKbps(user.PPPoEProfile.BandwidthMaxUp, user.PPPoEProfile.BandwidthMaxDown); rl != "" {
+			return rl
+		}
+	}
+	return ""
+}
+
+func effectiveBandwidth(user domain.RadiusUser) (uint32, uint32) {
+	up, down := user.BandwidthMaxUp, user.BandwidthMaxDown
+	if user.PPPoEProfile != nil {
+		if up == 0 && user.PPPoEProfile.BandwidthMaxUp > 0 {
+			up = uint32(user.PPPoEProfile.BandwidthMaxUp)
+		}
+		if down == 0 && user.PPPoEProfile.BandwidthMaxDown > 0 {
+			down = uint32(user.PPPoEProfile.BandwidthMaxDown)
+		}
+	}
+	return up, down
+}
+
+func effectiveMaxTotalOctets(user domain.RadiusUser) uint32 {
+	if user.MaxTotalOctets > 0 {
+		return user.MaxTotalOctets
+	}
+	if user.PPPoEProfile != nil && user.PPPoEProfile.MaxTotalOctets > 0 {
+		// RADIUS attributes are 32-bit; Acct-Input/Output-Gigawords would be needed to exceed 4 GiB.
+		if user.PPPoEProfile.MaxTotalOctets > math.MaxUint32 {
+			return math.MaxUint32
+		}
+		return uint32(user.PPPoEProfile.MaxTotalOctets)
+	}
+	return 0
+}
+
+func effectiveSessionTimeout(user domain.RadiusUser) int {
+	if user.SessionTimeout > 0 {
+		return user.SessionTimeout
+	}
+	if user.PPPoEProfile != nil && user.PPPoEProfile.SessionTimeout > 0 {
+		return user.PPPoEProfile.SessionTimeout
+	}
+	return 0
+}
+
+func effectiveIdleTimeout(user domain.RadiusUser) int {
+	if user.IdleTimeout > 0 {
+		return user.IdleTimeout
+	}
+	if user.PPPoEProfile != nil && user.PPPoEProfile.IdleTimeout > 0 {
+		return user.PPPoEProfile.IdleTimeout
+	}
+	return 0
 }
 
 func formatKbps(kbps int) string {

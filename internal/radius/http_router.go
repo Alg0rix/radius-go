@@ -41,6 +41,14 @@ func RegisterHTTPHandlers(e *echo.Echo, svc *Service, internalSecret string) {
 	pkgs.PUT("/:id", svc.HandleUpdateVoucherPackage)
 	pkgs.DELETE("/:id", svc.HandleDeleteVoucherPackage)
 
+	// PPPoE profiles
+	pppoeProfiles := e.Group("/api/v1/pppoe-profiles", secretMW)
+	pppoeProfiles.GET("", svc.HandleListPPPoEProfiles)
+	pppoeProfiles.POST("", svc.HandleCreatePPPoEProfile)
+	pppoeProfiles.GET("/:id", svc.HandleGetPPPoEProfile)
+	pppoeProfiles.PUT("/:id", svc.HandleUpdatePPPoEProfile)
+	pppoeProfiles.DELETE("/:id", svc.HandleDeletePPPoEProfile)
+
 	// Vouchers
 	e.GET("/api/v1/vouchers", svc.HandleListVouchers, secretMW)
 	e.POST("/api/v1/vouchers/generate", svc.HandleGenerateVouchers, secretMW)

@@ -42,6 +42,7 @@ type Service struct {
 	deps    *runtime.Dependencies
 	repo    *Repository
 	voucher *VoucherService
+	pppoe   *PPPoEProfileService
 	config  config.Config
 
 	startedAt time.Time
@@ -75,6 +76,7 @@ func NewService(deps *runtime.Dependencies, cfg config.Config) *Service {
 		stopRefresh: make(chan struct{}),
 	}
 	s.voucher = NewVoucherService(deps.DB, s.repo)
+	s.pppoe = NewPPPoEProfileService(s.repo)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := s.refreshFromDB(ctx); err != nil {
@@ -185,6 +187,25 @@ func (s *Service) refreshFromDB(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("refresh nas: %w", err)
 	}
+	profiles, err := s.pppoe.ListProfiles(ctx)
+	if err != nil {
+		return fmt.Errorf("refresh pppoe profiles: %w", err)
+	}
+	packages, err := s.voucher.ListPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("refresh voucher packages: %w", err)
+	}
+
+	profileMap := make(map[string]domain.PPPoEProfile, len(profiles))
+	for _, p := range profiles {
+		if p.Enabled {
+			profileMap[p.ID] = p
+		}
+	}
+	packageMap := make(map[string]domain.VoucherPackage, len(packages))
+	for _, pkg := range packages {
+		packageMap[pkg.ID] = pkg
+	}
 
 	s.mu.Lock()
 	newSubscribers := make(map[string]domain.RadiusUser, len(users))
@@ -210,6 +231,16 @@ func (s *Service) refreshFromDB(ctx context.Context) error {
 				u.ExpiresAt = existing.ExpiresAt
 			}
 		}
+		if u.PPPoEProfileID != nil && *u.PPPoEProfileID != "" {
+			if p, ok := profileMap[*u.PPPoEProfileID]; ok {
+				u.PPPoEProfile = &p
+			}
+		}
+		if u.VoucherPackageID != nil && *u.VoucherPackageID != "" {
+			if pkg, ok := packageMap[*u.VoucherPackageID]; ok {
+				u.VoucherPackage = &pkg
+			}
+		}
 		newSubscribers[u.Username] = u
 	}
 	s.subscribers = newSubscribers
@@ -226,6 +257,8 @@ func (s *Service) refreshFromDB(ctx context.Context) error {
 		Int("users", len(users)).
 		Int("nas_total", len(nases)).
 		Int("nas_enabled", len(s.nases)).
+		Int("pppoe_profiles", len(profileMap)).
+		Int("voucher_packages", len(packageMap)).
 		Msg("db refresh complete")
 	return nil
 }

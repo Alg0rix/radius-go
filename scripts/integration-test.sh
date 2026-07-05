@@ -298,20 +298,60 @@ VOUCHER_BW_USER_ID=$(radiusctl subscriber list --json | jq -r ".[] | select(.use
 radiusctl subscriber delete --id "${VOUCHER_BW_USER_ID}"
 radiusctl voucher package delete --id "${PKG_BW}"
 
-echo "===> PPPoE access test"
+echo "===> PPPoE profile test"
 PPPOE_SESSION_ID="PPPoE-${TEST_RUN_ID}"
 PPPOE_USERNAME="pppoeuser-${TEST_RUN_ID}"
-echo "Create PPPoE-style subscriber"
-PPPOE_USER_ID=$(radiusctl subscriber create --username "${PPPOE_USERNAME}" --password "pppoepass" --service-type login --json | jq -r '.id')
-echo "PPPoE auth (Login-Service should be present)"
-echo "User-Name=${PPPOE_USERNAME},User-Password=pppoepass,NAS-Identifier=PPPoE-BRAS,Service-Type=Login-User,Framed-Protocol=PPP,Framed-MTU=1480,Called-Station-Id=00:11:22:33:44:55,Calling-Station-Id=aa:bb:cc:dd:ee:ff" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1812 auth "${RADIUS_SECRET_RADIUS}"
-echo "PPPoE accounting start"
+PPPOE_PROFILE=$(radiusctl pppoe-profile create --name "TestPPPoE-${TEST_RUN_ID}" --description "Integration test PPPoE profile" --pool "test-pool" --netmask "255.255.255.0" --primary-dns "1.1.1.1" --secondary-dns "8.8.8.8" --mtu 1492 --compression --rate-limit "10M/10M" --session-timeout 3600 --idle-timeout 300 --json)
+PPPOE_PROFILE_ID=$(echo "${PPPOE_PROFILE}" | jq -r '.id')
+echo "PPPoE Profile ID: ${PPPOE_PROFILE_ID}"
+
+echo "===> Create PPPoE subscriber with profile"
+PPPOE_USER_ID=$(radiusctl subscriber create --username "${PPPOE_USERNAME}" --password "pppoepass" --service-type login --pppoe-profile-id "${PPPOE_PROFILE_ID}" --json | jq -r '.id')
+echo "PPPoE User ID: ${PPPOE_USER_ID}"
+
+echo "===> PPPoE auth (should get Access-Accept with profile attributes)"
+AUTH_OUTPUT=$(echo "User-Name=${PPPOE_USERNAME},User-Password=pppoepass,NAS-Identifier=PPPoE-BRAS,Called-Station-Id=00:11:22:33:44:55,Calling-Station-Id=aa:bb:cc:dd:ee:ff" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1812 auth "${RADIUS_SECRET_RADIUS}")
+echo "${AUTH_OUTPUT}"
+if ! echo "${AUTH_OUTPUT}" | grep -q "Framed-Protocol = PPP"; then
+  echo "ERROR: Framed-Protocol=PPP not found"
+  exit 1
+fi
+if ! echo "${AUTH_OUTPUT}" | grep -q "Framed-Pool = \"test-pool\""; then
+  echo "ERROR: Framed-Pool not found"
+  exit 1
+fi
+if ! echo "${AUTH_OUTPUT}" | grep -q "Framed-MTU = 1492"; then
+  echo "ERROR: Framed-MTU not found"
+  exit 1
+fi
+if ! echo "${AUTH_OUTPUT}" | grep -q "Session-Timeout = 3600"; then
+  echo "ERROR: Session-Timeout not found"
+  exit 1
+fi
+if ! echo "${AUTH_OUTPUT}" | grep -q "Mikrotik-Rate-Limit = \"10M/10M\""; then
+  echo "ERROR: Mikrotik-Rate-Limit not found"
+  exit 1
+fi
+echo "OK: PPPoE profile attributes present"
+
+echo "===> PPPoE accounting start"
 echo "User-Name=${PPPOE_USERNAME},Acct-Session-Id=${PPPOE_SESSION_ID},NAS-IP-Address=${RADIUS_PACKET_SRC},NAS-Identifier=PPPoE-BRAS,Framed-Protocol=PPP,Framed-IP-Address=100.64.10.20,Calling-Station-Id=aa:bb:cc:dd:ee:ff,Called-Station-Id=00:11:22:33:44:55,Acct-Status-Type=Start" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1813 acct "${RADIUS_SECRET_RADIUS}"
-echo "PPPoE interim update"
+
+echo "===> Verify PPPoE session service_type=login"
+if radiusctl session list --json | jq -e ".[] | select(.username==\"${PPPOE_USERNAME}\" and .service_type==\"login\" and .session_status==\"active\")" >/dev/null; then
+  echo "OK: PPPoE session recorded with service_type=login"
+else
+  echo "ERROR: PPPoE session not found or wrong service_type"
+  exit 1
+fi
+
+echo "===> PPPoE interim update"
 echo "User-Name=${PPPOE_USERNAME},Acct-Session-Id=${PPPOE_SESSION_ID},NAS-IP-Address=${RADIUS_PACKET_SRC},NAS-Identifier=PPPoE-BRAS,Framed-Protocol=PPP,Framed-IP-Address=100.64.10.20,Calling-Station-Id=aa:bb:cc:dd:ee:ff,Called-Station-Id=00:11:22:33:44:55,Acct-Input-Octets=16777216,Acct-Output-Octets=33554432,Acct-Session-Time=120,Acct-Status-Type=Interim-Update" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1813 acct "${RADIUS_SECRET_RADIUS}"
-echo "PPPoE accounting stop"
+
+echo "===> PPPoE accounting stop"
 echo "User-Name=${PPPOE_USERNAME},Acct-Session-Id=${PPPOE_SESSION_ID},NAS-IP-Address=${RADIUS_PACKET_SRC},NAS-Identifier=PPPoE-BRAS,Framed-Protocol=PPP,Framed-IP-Address=100.64.10.20,Calling-Station-Id=aa:bb:cc:dd:ee:ff,Called-Station-Id=00:11:22:33:44:55,Acct-Input-Octets=33554432,Acct-Output-Octets=67108864,Acct-Session-Time=300,Acct-Status-Type=Stop" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1813 acct "${RADIUS_SECRET_RADIUS}"
-echo "Verify PPPoE session stopped"
+
+echo "===> Verify PPPoE session stopped"
 if radiusctl session list --json | jq -e ".[] | select(.username==\"${PPPOE_USERNAME}\" and .session_status==\"stopped\")" >/dev/null; then
   echo "OK: PPPoE session recorded as stopped"
 else
@@ -319,6 +359,23 @@ else
   exit 1
 fi
 radiusctl subscriber delete --id "${PPPOE_USER_ID}"
+radiusctl pppoe-profile delete --id "${PPPOE_PROFILE_ID}"
+
+echo "===> Hotspot voucher package with address pool and DNS"
+HOTSPOT_PKG=$(radiusctl voucher package create --name "HotspotPoolPackage" --description "Hotspot with pool" --price 1 --speed-up 1024 --speed-down 2048 --address-pool "hotspot-pool" --primary-dns "9.9.9.9" --json | jq -r '.id')
+HOTSPOT_VOUCHER=$(radiusctl voucher generate --package-id "${HOTSPOT_PKG}" --count 1 --json | jq -r '.[0]')
+HOTSPOT_USER=$(echo "${HOTSPOT_VOUCHER}" | jq -r '.username')
+HOTSPOT_PASS=$(echo "${HOTSPOT_VOUCHER}" | jq -r '.password')
+AUTH_OUTPUT=$(echo "User-Name=${HOTSPOT_USER},User-Password=${HOTSPOT_PASS}" | radiusclient_cmd "${API_HOST:-${RADIUS_HOST}}" 1812 auth "${RADIUS_SECRET_RADIUS}")
+echo "${AUTH_OUTPUT}"
+if ! echo "${AUTH_OUTPUT}" | grep -q "Framed-Pool = \"hotspot-pool\""; then
+  echo "ERROR: Hotspot Framed-Pool not found"
+  exit 1
+fi
+echo "OK: hotspot voucher address pool emitted"
+HOTSPOT_USER_ID=$(radiusctl subscriber list --json | jq -r ".[] | select(.username==\"${HOTSPOT_USER}\") | .id")
+radiusctl subscriber delete --id "${HOTSPOT_USER_ID}"
+radiusctl voucher package delete --id "${HOTSPOT_PKG}"
 
 echo "==> Cleanup sessions"
 radiusctl session cleanup

@@ -26,7 +26,7 @@ func NewVoucherService(db *pgxpool.Pool, repo *Repository) *VoucherService {
 
 const voucherPackageSelect = `SELECT id, name, description, price, speed_upload_kbps,
 	speed_download_kbps, data_cap_bytes, time_limit_type, time_limit_seconds,
-	max_concurrent_users, enabled, created_at, updated_at`
+	max_concurrent_users, address_pool, primary_dns, secondary_dns, enabled, created_at, updated_at`
 
 func scanVoucherPackages(rows pgx.Rows) ([]domain.VoucherPackage, error) {
 	var packages []domain.VoucherPackage
@@ -34,7 +34,8 @@ func scanVoucherPackages(rows pgx.Rows) ([]domain.VoucherPackage, error) {
 		var p domain.VoucherPackage
 		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Price,
 			&p.SpeedUploadKbps, &p.SpeedDownloadKbps, &p.DataCapBytes,
-			&p.TimeLimitType, &p.TimeLimitSeconds, &p.MaxConcurrentUsers, &p.Enabled,
+			&p.TimeLimitType, &p.TimeLimitSeconds, &p.MaxConcurrentUsers,
+			&p.AddressPool, &p.PrimaryDNS, &p.SecondaryDNS, &p.Enabled,
 			&p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan voucher package: %w", err)
 		}
@@ -48,7 +49,6 @@ func (v *VoucherService) CreatePackage(ctx context.Context, req domain.CreateVou
 	if req.TimeLimitType == string(domain.TimeLimitCalendar) {
 		timeLimitType = domain.TimeLimitCalendar
 	}
-
 	pkg := domain.VoucherPackage{
 		ID:                 uuid.New().String(),
 		Name:               req.Name,
@@ -60,16 +60,20 @@ func (v *VoucherService) CreatePackage(ctx context.Context, req domain.CreateVou
 		TimeLimitType:      timeLimitType,
 		TimeLimitSeconds:   req.TimeLimitSeconds,
 		MaxConcurrentUsers: req.MaxConcurrentUsers,
+		AddressPool:        req.AddressPool,
+		PrimaryDNS:         req.PrimaryDNS,
+		SecondaryDNS:       req.SecondaryDNS,
 		Enabled:            true,
 	}
 
 	_, err := v.db.Exec(ctx, `INSERT INTO voucher_packages (id, name, description, price,
 		speed_upload_kbps, speed_download_kbps, data_cap_bytes, time_limit_type,
-		time_limit_seconds, max_concurrent_users, enabled)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		time_limit_seconds, max_concurrent_users, address_pool, primary_dns, secondary_dns, enabled)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
 		pkg.ID, pkg.Name, pkg.Description, pkg.Price,
 		pkg.SpeedUploadKbps, pkg.SpeedDownloadKbps, pkg.DataCapBytes,
-		string(pkg.TimeLimitType), pkg.TimeLimitSeconds, pkg.MaxConcurrentUsers, pkg.Enabled)
+		string(pkg.TimeLimitType), pkg.TimeLimitSeconds, pkg.MaxConcurrentUsers,
+		pkg.AddressPool, pkg.PrimaryDNS, pkg.SecondaryDNS, pkg.Enabled)
 	if err != nil {
 		return pkg, fmt.Errorf("create voucher package: %w", err)
 	}
@@ -90,7 +94,8 @@ func (v *VoucherService) GetPackage(ctx context.Context, id string) (*domain.Vou
 	var p domain.VoucherPackage
 	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Price,
 		&p.SpeedUploadKbps, &p.SpeedDownloadKbps, &p.DataCapBytes,
-		&p.TimeLimitType, &p.TimeLimitSeconds, &p.MaxConcurrentUsers, &p.Enabled,
+		&p.TimeLimitType, &p.TimeLimitSeconds, &p.MaxConcurrentUsers,
+		&p.AddressPool, &p.PrimaryDNS, &p.SecondaryDNS, &p.Enabled,
 		&p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get voucher package: %w", err)
@@ -130,17 +135,28 @@ func (v *VoucherService) UpdatePackage(ctx context.Context, id string, req domai
 	if req.MaxConcurrentUsers != nil {
 		existing.MaxConcurrentUsers = *req.MaxConcurrentUsers
 	}
+	if req.AddressPool != nil {
+		existing.AddressPool = *req.AddressPool
+	}
+	if req.PrimaryDNS != nil {
+		existing.PrimaryDNS = *req.PrimaryDNS
+	}
+	if req.SecondaryDNS != nil {
+		existing.SecondaryDNS = *req.SecondaryDNS
+	}
 	if req.Enabled != nil {
 		existing.Enabled = *req.Enabled
 	}
 
 	_, err = v.db.Exec(ctx, `UPDATE voucher_packages SET name=$1, description=$2, price=$3,
 		speed_upload_kbps=$4, speed_download_kbps=$5, data_cap_bytes=$6, time_limit_type=$7,
-		time_limit_seconds=$8, max_concurrent_users=$9, enabled=$10, updated_at=now()
-		WHERE id=$11`,
+		time_limit_seconds=$8, max_concurrent_users=$9, address_pool=$10, primary_dns=$11,
+		secondary_dns=$12, enabled=$13, updated_at=now()
+		WHERE id=$14`,
 		existing.Name, existing.Description, existing.Price,
 		existing.SpeedUploadKbps, existing.SpeedDownloadKbps, existing.DataCapBytes,
 		string(existing.TimeLimitType), existing.TimeLimitSeconds, existing.MaxConcurrentUsers,
+		existing.AddressPool, existing.PrimaryDNS, existing.SecondaryDNS,
 		existing.Enabled, id)
 	if err != nil {
 		return domain.VoucherPackage{}, fmt.Errorf("update voucher package: %w", err)

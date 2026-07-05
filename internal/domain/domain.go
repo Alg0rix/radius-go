@@ -34,9 +34,12 @@ type RadiusUser struct {
 	BandwidthMaxDown uint32      `json:"bandwidth_max_down"`
 	MaxTotalOctets   uint32      `json:"max_total_octets"`
 	ServiceType      ServiceType `json:"service_type"`
+	PPPoEProfileID   *string         `json:"pppoe_profile_id,omitempty"`
+	PPPoEProfile     *PPPoEProfile   `json:"pppoe_profile,omitempty"`
+	VoucherPackageID *string         `json:"voucher_package_id,omitempty"`
+	VoucherPackage   *VoucherPackage `json:"voucher_package,omitempty"`
 	// Voucher tracking — zero values mean "not a voucher".
 	IsVoucher               bool        `json:"is_voucher"`
-	VoucherPackageID        *string     `json:"voucher_package_id,omitempty"`
 	FirstLoginAt            *time.Time  `json:"first_login_at,omitempty"`
 	ExpiresAt               *time.Time  `json:"expires_at,omitempty"`
 	UsageSecondsUsed        int        `json:"usage_seconds_used"`
@@ -89,26 +92,27 @@ type RadiusSession struct {
 }
 
 type Subscriber struct {
-	ID               string      `json:"id"`
-	Username         string      `json:"username"`
-	FullName         string      `json:"full_name"`
-	Email            string      `json:"email"`
-	Enabled          bool        `json:"enabled"`
-	SimultaneousUse  int         `json:"simultaneous_use"`
-	SessionTimeout   int         `json:"session_timeout"`
-	IdleTimeout      int         `json:"idle_timeout"`
-	FramedIP         string      `json:"framed_ip"`
-	MikrotikGroup    string      `json:"mikrotik_group"`
-	RateLimit        string      `json:"rate_limit"`
-	BandwidthMaxUp   uint32      `json:"bandwidth_max_up"`
-	BandwidthMaxDown uint32      `json:"bandwidth_max_down"`
-	MaxTotalOctets   uint32      `json:"max_total_octets"`
-	ServiceType      ServiceType `json:"service_type"`
-	IsVoucher        bool        `json:"is_voucher"`
-	VoucherPackageID *string     `json:"voucher_package_id,omitempty"`
-	ExpiresAt        *time.Time  `json:"expires_at,omitempty"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
+	ID               string        `json:"id"`
+	Username         string        `json:"username"`
+	FullName         string        `json:"full_name"`
+	Email            string        `json:"email"`
+	Enabled          bool          `json:"enabled"`
+	SimultaneousUse  int           `json:"simultaneous_use"`
+	SessionTimeout   int           `json:"session_timeout"`
+	IdleTimeout      int           `json:"idle_timeout"`
+	FramedIP         string        `json:"framed_ip"`
+	MikrotikGroup    string        `json:"mikrotik_group"`
+	RateLimit        string        `json:"rate_limit"`
+	BandwidthMaxUp   uint32        `json:"bandwidth_max_up"`
+	BandwidthMaxDown uint32        `json:"bandwidth_max_down"`
+	MaxTotalOctets   uint32        `json:"max_total_octets"`
+	ServiceType      ServiceType   `json:"service_type"`
+	PPPoEProfileID   *string       `json:"pppoe_profile_id,omitempty"`
+	IsVoucher        bool          `json:"is_voucher"`
+	VoucherPackageID *string       `json:"voucher_package_id,omitempty"`
+	ExpiresAt        *time.Time    `json:"expires_at,omitempty"`
+	CreatedAt        time.Time     `json:"created_at"`
+	UpdatedAt        time.Time     `json:"updated_at"`
 }
 
 func SubscriberFromUser(u RadiusUser) Subscriber {
@@ -132,6 +136,7 @@ func SubscriberFromUser(u RadiusUser) Subscriber {
 		BandwidthMaxDown: u.BandwidthMaxDown,
 		MaxTotalOctets:   u.MaxTotalOctets,
 		ServiceType:      u.ServiceType,
+		PPPoEProfileID:   u.PPPoEProfileID,
 		IsVoucher:        u.IsVoucher,
 		VoucherPackageID: pkgID,
 		ExpiresAt:        u.ExpiresAt,
@@ -154,7 +159,8 @@ type CreateUserRequest struct {
 	BandwidthMaxUp   uint32 `json:"bandwidth_max_up"`
 	BandwidthMaxDown uint32 `json:"bandwidth_max_down"`
 	MaxTotalOctets   uint32 `json:"max_total_octets"`
-	ServiceType     string `json:"service_type"`
+	ServiceType      string `json:"service_type"`
+	PPPoEProfileID   string `json:"pppoe_profile_id"`
 }
 
 type UpdateUserRequest struct {
@@ -173,6 +179,7 @@ type UpdateUserRequest struct {
 	BandwidthMaxDown  *uint32 `json:"bandwidth_max_down"`
 	MaxTotalOctets    *uint32 `json:"max_total_octets"`
 	ServiceType       string  `json:"service_type"`
+	PPPoEProfileID    *string `json:"pppoe_profile_id"`
 }
 
 type CreateNASRequest struct {
@@ -224,33 +231,42 @@ type VoucherPackage struct {
 	TimeLimitType       TimeLimitType `json:"time_limit_type"`
 	TimeLimitSeconds    int           `json:"time_limit_seconds"`
 	MaxConcurrentUsers  int           `json:"max_concurrent_users"`
+	AddressPool         string        `json:"address_pool"`
+	PrimaryDNS          string        `json:"primary_dns"`
+	SecondaryDNS        string        `json:"secondary_dns"`
 	Enabled             bool          `json:"enabled"`
 	CreatedAt           time.Time     `json:"created_at"`
 	UpdatedAt           time.Time     `json:"updated_at"`
 }
 
 type CreateVoucherPackageRequest struct {
-	Name               string `json:"name"`
-	Description        string `json:"description"`
+	Name               string  `json:"name"`
+	Description        string  `json:"description"`
 	Price              float64 `json:"price"`
-	SpeedUploadKbps     int    `json:"speed_upload_kbps"`
-	SpeedDownloadKbps   int    `json:"speed_download_kbps"`
-	DataCapBytes       int64  `json:"data_cap_bytes"`
-	TimeLimitType       string `json:"time_limit_type"`
-	TimeLimitSeconds    int    `json:"time_limit_seconds"`
-	MaxConcurrentUsers  int    `json:"max_concurrent_users"`
+	SpeedUploadKbps    int     `json:"speed_upload_kbps"`
+	SpeedDownloadKbps  int     `json:"speed_download_kbps"`
+	DataCapBytes       int64   `json:"data_cap_bytes"`
+	TimeLimitType      string  `json:"time_limit_type"`
+	TimeLimitSeconds   int     `json:"time_limit_seconds"`
+	MaxConcurrentUsers int     `json:"max_concurrent_users"`
+	AddressPool        string  `json:"address_pool"`
+	PrimaryDNS         string  `json:"primary_dns"`
+	SecondaryDNS       string  `json:"secondary_dns"`
 }
 
 type UpdateVoucherPackageRequest struct {
 	Name               *string  `json:"name"`
 	Description        *string  `json:"description"`
 	Price              *float64 `json:"price"`
-	SpeedUploadKbps     *int     `json:"speed_upload_kbps"`
-	SpeedDownloadKbps   *int     `json:"speed_download_kbps"`
+	SpeedUploadKbps    *int     `json:"speed_upload_kbps"`
+	SpeedDownloadKbps  *int     `json:"speed_download_kbps"`
 	DataCapBytes       *int64   `json:"data_cap_bytes"`
-	TimeLimitType       *string  `json:"time_limit_type"`
-	TimeLimitSeconds    *int     `json:"time_limit_seconds"`
-	MaxConcurrentUsers  *int     `json:"max_concurrent_users"`
+	TimeLimitType      *string  `json:"time_limit_type"`
+	TimeLimitSeconds   *int     `json:"time_limit_seconds"`
+	MaxConcurrentUsers *int     `json:"max_concurrent_users"`
+	AddressPool        *string  `json:"address_pool"`
+	PrimaryDNS         *string  `json:"primary_dns"`
+	SecondaryDNS       *string  `json:"secondary_dns"`
 	Enabled            *bool    `json:"enabled"`
 }
 
@@ -277,4 +293,66 @@ type VoucherBalance struct {
 	DataCapBytes         int64  `json:"data_cap_bytes"`
 	DataBytesUsed        int64  `json:"data_bytes_used"`
 	DataBytesRemaining   int64  `json:"data_bytes_remaining"`
+}
+
+type PPPoEProfile struct {
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	FramedIPPool      string    `json:"framed_ip_pool"`
+	FramedIPNetmask   string    `json:"framed_ip_netmask"`
+	PrimaryDNS        string    `json:"primary_dns"`
+	SecondaryDNS      string    `json:"secondary_dns"`
+	PPPCompression    bool      `json:"ppp_compression"`
+	MTU               int       `json:"mtu"`
+	MRU               int       `json:"mru"`
+	KeepaliveInterval int       `json:"keepalive_interval"`
+	RateLimit         string    `json:"rate_limit"`
+	BandwidthMaxUp    int       `json:"bandwidth_max_up"`
+	BandwidthMaxDown  int       `json:"bandwidth_max_down"`
+	SessionTimeout    int       `json:"session_timeout"`
+	IdleTimeout       int       `json:"idle_timeout"`
+	MaxTotalOctets    int64     `json:"max_total_octets"`
+	Enabled           bool      `json:"enabled"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type CreatePPPoEProfileRequest struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	FramedIPPool      string `json:"framed_ip_pool"`
+	FramedIPNetmask   string `json:"framed_ip_netmask"`
+	PrimaryDNS        string `json:"primary_dns"`
+	SecondaryDNS      string `json:"secondary_dns"`
+	PPPCompression    bool   `json:"ppp_compression"`
+	MTU               int    `json:"mtu"`
+	MRU               int    `json:"mru"`
+	KeepaliveInterval int    `json:"keepalive_interval"`
+	RateLimit         string `json:"rate_limit"`
+	BandwidthMaxUp    int    `json:"bandwidth_max_up"`
+	BandwidthMaxDown  int    `json:"bandwidth_max_down"`
+	SessionTimeout    int    `json:"session_timeout"`
+	IdleTimeout       int    `json:"idle_timeout"`
+	MaxTotalOctets    int64  `json:"max_total_octets"`
+}
+
+type UpdatePPPoEProfileRequest struct {
+	Name              *string `json:"name"`
+	Description       *string `json:"description"`
+	FramedIPPool      *string `json:"framed_ip_pool"`
+	FramedIPNetmask   *string `json:"framed_ip_netmask"`
+	PrimaryDNS        *string `json:"primary_dns"`
+	SecondaryDNS      *string `json:"secondary_dns"`
+	PPPCompression    *bool   `json:"ppp_compression"`
+	MTU               *int    `json:"mtu"`
+	MRU               *int    `json:"mru"`
+	KeepaliveInterval *int    `json:"keepalive_interval"`
+	RateLimit         *string `json:"rate_limit"`
+	BandwidthMaxUp    *int    `json:"bandwidth_max_up"`
+	BandwidthMaxDown  *int    `json:"bandwidth_max_down"`
+	SessionTimeout    *int    `json:"session_timeout"`
+	IdleTimeout       *int    `json:"idle_timeout"`
+	MaxTotalOctets    *int64  `json:"max_total_octets"`
+	Enabled           *bool   `json:"enabled"`
 }

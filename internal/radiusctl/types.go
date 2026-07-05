@@ -73,6 +73,7 @@ type Subscriber struct {
 	BandwidthMaxDown uint32     `json:"bandwidth_max_down"`
 	MaxTotalOctets   uint32     `json:"max_total_octets"`
 	ServiceType      string     `json:"service_type"`
+	PPPoEProfileID   string     `json:"pppoe_profile_id,omitempty"`
 	IsVoucher        bool       `json:"is_voucher"`
 	VoucherPackageID string     `json:"voucher_package_id,omitempty"`
 	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
@@ -96,26 +97,28 @@ type CreateSubscriberRequest struct {
 	BandwidthMaxDown uint32 `json:"bandwidth_max_down"`
 	MaxTotalOctets   uint32 `json:"max_total_octets"`
 	ServiceType      string `json:"service_type"`
+	PPPoEProfileID   string `json:"pppoe_profile_id"`
 }
 
 // UpdateSubscriberRequest is the body for PUT /api/v1/radius/subscribers/:id.
 // Pointer fields let us distinguish "not provided" from "set to zero".
 type UpdateSubscriberRequest struct {
-	Username         string  `json:"username,omitempty"`
-	Password         string  `json:"password,omitempty"`
-	FullName         string  `json:"full_name,omitempty"`
-	Email            string  `json:"email,omitempty"`
-	Enabled          *bool   `json:"enabled,omitempty"`
-	SimultaneousUse  *int    `json:"simultaneous_use,omitempty"`
-	SessionTimeout   *int    `json:"session_timeout,omitempty"`
-	IdleTimeout      *int    `json:"idle_timeout,omitempty"`
-	FramedIP         string  `json:"framed_ip,omitempty"`
-	MikrotikGroup    string  `json:"mikrotik_group,omitempty"`
-	RateLimit        string  `json:"rate_limit,omitempty"`
-	BandwidthMaxUp   *uint32 `json:"bandwidth_max_up,omitempty"`
-	BandwidthMaxDown *uint32 `json:"bandwidth_max_down,omitempty"`
-	MaxTotalOctets   *uint32 `json:"max_total_octets,omitempty"`
-	ServiceType      string  `json:"service_type,omitempty"`
+	Username         string   `json:"username,omitempty"`
+	Password         string   `json:"password,omitempty"`
+	FullName         string   `json:"full_name,omitempty"`
+	Email            string   `json:"email,omitempty"`
+	Enabled          *bool    `json:"enabled,omitempty"`
+	SimultaneousUse  *int     `json:"simultaneous_use,omitempty"`
+	SessionTimeout   *int     `json:"session_timeout,omitempty"`
+	IdleTimeout      *int     `json:"idle_timeout,omitempty"`
+	FramedIP         string   `json:"framed_ip,omitempty"`
+	MikrotikGroup    string   `json:"mikrotik_group,omitempty"`
+	RateLimit        string   `json:"rate_limit,omitempty"`
+	BandwidthMaxUp   *uint32  `json:"bandwidth_max_up,omitempty"`
+	BandwidthMaxDown *uint32  `json:"bandwidth_max_down,omitempty"`
+	MaxTotalOctets   *uint32  `json:"max_total_octets,omitempty"`
+	ServiceType      string   `json:"service_type,omitempty"`
+	PPPoEProfileID   *string  `json:"pppoe_profile_id,omitempty"`
 }
 
 // Session mirrors domain.RadiusSession.
@@ -195,6 +198,9 @@ type VoucherPackage struct {
 	TimeLimitType      string    `json:"time_limit_type"`
 	TimeLimitSeconds   int       `json:"time_limit_seconds"`
 	MaxConcurrentUsers int       `json:"max_concurrent_users"`
+	AddressPool        string    `json:"address_pool"`
+	PrimaryDNS         string    `json:"primary_dns"`
+	SecondaryDNS       string    `json:"secondary_dns"`
 	Enabled            bool      `json:"enabled"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
@@ -211,6 +217,9 @@ type CreateVoucherPackageRequest struct {
 	TimeLimitType      string  `json:"time_limit_type"`
 	TimeLimitSeconds   int     `json:"time_limit_seconds"`
 	MaxConcurrentUsers int     `json:"max_concurrent_users"`
+	AddressPool        string  `json:"address_pool"`
+	PrimaryDNS         string  `json:"primary_dns"`
+	SecondaryDNS       string  `json:"secondary_dns"`
 }
 
 // UpdateVoucherPackageRequest is the body for PUT /api/v1/voucher-packages/:id.
@@ -224,6 +233,9 @@ type UpdateVoucherPackageRequest struct {
 	TimeLimitType      *string  `json:"time_limit_type,omitempty"`
 	TimeLimitSeconds   *int     `json:"time_limit_seconds,omitempty"`
 	MaxConcurrentUsers *int     `json:"max_concurrent_users,omitempty"`
+	AddressPool        *string  `json:"address_pool,omitempty"`
+	PrimaryDNS         *string  `json:"primary_dns,omitempty"`
+	SecondaryDNS       *string  `json:"secondary_dns,omitempty"`
 	Enabled            *bool    `json:"enabled,omitempty"`
 }
 
@@ -263,4 +275,69 @@ type VoucherBalance struct {
 // DeleteResult is the {id: ...} body returned by delete endpoints.
 type DeleteResult struct {
 	ID string `json:"id"`
+}
+
+// PPPoEProfile mirrors domain.PPPoEProfile.
+type PPPoEProfile struct {
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	FramedIPPool      string    `json:"framed_ip_pool"`
+	FramedIPNetmask   string    `json:"framed_ip_netmask"`
+	PrimaryDNS        string    `json:"primary_dns"`
+	SecondaryDNS      string    `json:"secondary_dns"`
+	PPPCompression    bool      `json:"ppp_compression"`
+	MTU               int       `json:"mtu"`
+	MRU               int       `json:"mru"`
+	KeepaliveInterval int       `json:"keepalive_interval"`
+	RateLimit         string    `json:"rate_limit"`
+	BandwidthMaxUp    int       `json:"bandwidth_max_up"`
+	BandwidthMaxDown  int       `json:"bandwidth_max_down"`
+	SessionTimeout    int       `json:"session_timeout"`
+	IdleTimeout       int       `json:"idle_timeout"`
+	MaxTotalOctets    int64     `json:"max_total_octets"`
+	Enabled           bool      `json:"enabled"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+// CreatePPPoEProfileRequest is the body for POST /api/v1/pppoe-profiles.
+type CreatePPPoEProfileRequest struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	FramedIPPool      string `json:"framed_ip_pool"`
+	FramedIPNetmask   string `json:"framed_ip_netmask"`
+	PrimaryDNS        string `json:"primary_dns"`
+	SecondaryDNS      string `json:"secondary_dns"`
+	PPPCompression    bool   `json:"ppp_compression"`
+	MTU               int    `json:"mtu"`
+	MRU               int    `json:"mru"`
+	KeepaliveInterval int    `json:"keepalive_interval"`
+	RateLimit         string `json:"rate_limit"`
+	BandwidthMaxUp    int    `json:"bandwidth_max_up"`
+	BandwidthMaxDown  int    `json:"bandwidth_max_down"`
+	SessionTimeout    int    `json:"session_timeout"`
+	IdleTimeout       int    `json:"idle_timeout"`
+	MaxTotalOctets    int64  `json:"max_total_octets"`
+}
+
+// UpdatePPPoEProfileRequest is the body for PUT /api/v1/pppoe-profiles/:id.
+type UpdatePPPoEProfileRequest struct {
+	Name              *string `json:"name,omitempty"`
+	Description       *string `json:"description,omitempty"`
+	FramedIPPool      *string `json:"framed_ip_pool,omitempty"`
+	FramedIPNetmask   *string `json:"framed_ip_netmask,omitempty"`
+	PrimaryDNS        *string `json:"primary_dns,omitempty"`
+	SecondaryDNS      *string `json:"secondary_dns,omitempty"`
+	PPPCompression    *bool   `json:"ppp_compression,omitempty"`
+	MTU               *int    `json:"mtu,omitempty"`
+	MRU               *int    `json:"mru,omitempty"`
+	KeepaliveInterval *int    `json:"keepalive_interval,omitempty"`
+	RateLimit         *string `json:"rate_limit,omitempty"`
+	BandwidthMaxUp    *int    `json:"bandwidth_max_up,omitempty"`
+	BandwidthMaxDown  *int    `json:"bandwidth_max_down,omitempty"`
+	SessionTimeout    *int    `json:"session_timeout,omitempty"`
+	IdleTimeout       *int    `json:"idle_timeout,omitempty"`
+	MaxTotalOctets    *int64  `json:"max_total_octets,omitempty"`
+	Enabled           *bool   `json:"enabled,omitempty"`
 }
